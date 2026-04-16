@@ -12,19 +12,33 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            arch: arm64
             build_flag: --mac --arm64
-            artifact_name: mac-arm64
+            artifact_name: intl-mac-arm64
+            ref: ''
+            edition: intl
           - os: windows-latest
-            arch: x64
             build_flag: --win --x64
-            artifact_name: win-x64
+            artifact_name: intl-win-x64
+            ref: ''
+            edition: intl
+          - os: macos-latest
+            build_flag: --mac --arm64
+            artifact_name: en-mac-arm64
+            ref: master
+            edition: en
+          - os: windows-latest
+            build_flag: --win --x64
+            artifact_name: en-win-x64
+            ref: master
+            edition: en
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -50,6 +64,36 @@ jobs:
         run: npx electron-builder ${{ matrix.build_flag }} --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Rename artifacts
+        shell: bash
+        run: |
+          python3 - <<'EOF'
+          import os, re, glob
+
+          version_raw = os.popen("node -p \"require('./package.json').version\"").read().strip()
+          version = version_raw.replace('-en', '')
+          edition = "${{ matrix.edition }}"
+
+          for f in glob.glob('dist-electron/*.dmg') + glob.glob('dist-electron/*.exe') + glob.glob('dist-electron/*.AppImage'):
+              base = os.path.basename(f)
+              if edition == 'en':
+                  # NetTools-1.0.2-en-arm64.dmg -> NetTools-1.0.2-arm64.dmg
+                  # NetTools Setup 1.0.2-en.exe  -> NetTools-1.0.2.exe
+                  new = re.sub(r'NetTools Setup ([\d.]+-en)\.exe', f'NetTools-{version}.exe', base)
+                  new = new.replace(f'-en-', '-').replace(f'-en.', '.')
+              else:
+                  # NetTools-1.0.2-arm64.dmg     -> NetTools-1.0.2-intl-arm64.dmg
+                  # NetTools Setup 1.0.2.exe      -> NetTools-1.0.2-intl.exe
+                  new = re.sub(r'NetTools Setup ([\d.]+)\.exe', f'NetTools-{version}-intl.exe', base)
+                  new = re.sub(rf'NetTools-{re.escape(version)}-arm64', f'NetTools-{version}-intl-arm64', new)
+                  new = re.sub(rf'NetTools-{re.escape(version)}\.', f'NetTools-{version}-intl.', new)
+              if new != base:
+                  os.rename(f, os.path.join('dist-electron', new))
+                  print(f'Renamed: {base} -> {new}')
+              else:
+                  print(f'Kept: {base}')
+          EOF
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -78,4 +122,23 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/**/*
-          generate_release_notes: true
+          body: |
+            ## What's New in ${{ github.ref_name }}
+
+            ### Improvements
+            - **PCAP Analyzer** now stays open when navigating to other pages — your analysis is preserved
+            - Uploading a new PCAP file automatically releases the previous one from memory
+            - Added **Close PCAP** button to manually free memory
+            - **Clear Cache** in Settings now instantly clears PCAP and ANPR record lists in the UI
+
+            ### Bug Fixes
+            - Fixed a crash (500 error) when loading PCAP files with out-of-order packet timestamps
+            - Fixed **Clear Cache** incorrectly reporting "0 files, 0 B freed"
+
+            ### Downloads
+            | File | Platform | Edition |
+            |------|----------|---------|
+            | `NetTools-1.0.2-arm64.dmg` | macOS (Apple Silicon) | en-US |
+            | `NetTools-1.0.2.exe` | Windows x64 (installer) | en-US |
+            | `NetTools-1.0.2-intl-arm64.dmg` | macOS (Apple Silicon) | Global (EN / 简体中文) |
+            | `NetTools-1.0.2-intl.exe` | Windows x64 (installer) | Global (EN / 简体中文) |

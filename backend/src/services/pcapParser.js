@@ -568,7 +568,7 @@ function getTimeline(packets, buckets = 60) {
     count: 0,
   }));
   for (const p of packets) {
-    const idx = Math.min(Math.floor((p.ts - minTs) / bucketSize), buckets - 1);
+    const idx = Math.max(0, Math.min(Math.floor((p.ts - minTs) / bucketSize), buckets - 1));
     data[idx].bytes += p.len;
     data[idx].count += 1;
   }

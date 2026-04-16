@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { useT } from '../i18n.js';
 
 // ── Terminal color themes ─────────────────────────────────────────────────────
 const TERM_DARK = {
@@ -51,6 +52,7 @@ function IconClear()   { return <svg width="11" height="11" viewBox="0 0 16 16" 
 
 // ── FilePanel ─────────────────────────────────────────────────────────────────
 function FilePanel({ sessionId }) {
+  const t = useT();
   const [remotePath, setRemotePath] = useState('/');
   const [pathInput, setPathInput] = useState('/');
   const [files, setFiles] = useState([]);
@@ -83,17 +85,17 @@ function FilePanel({ sessionId }) {
   async function handleUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
-    setUploadStatus('Uploading…');
+    setUploadStatus(t.sshUploading);
     const fd = new FormData();
     fd.append('sessionId', sessionId);
     fd.append('remotePath', remotePath);
     fd.append('file', file);
     try {
       await axios.post('/api/scp/upload', fd);
-      setUploadStatus('Upload complete');
+      setUploadStatus(t.sshUploadComplete);
       loadDir(remotePath);
     } catch (err) {
-      setUploadStatus(`Failed: ${err.response?.data?.error || err.message}`);
+      setUploadStatus(t.sshFailed(err.response?.data?.error || err.message));
     }
   }
 
@@ -107,15 +109,15 @@ function FilePanel({ sessionId }) {
   return (
     <div className="file-panel">
       <div className="panel-header">
-        <span className="panel-title">File Transfer</span>
+        <span className="panel-title">{t.sshFileTransfer}</span>
         <div className="path-bar">
-          <button className="icon-btn" title="Parent directory" onClick={goUp}><IconUp /></button>
+          <button className="icon-btn" title={t.sshParentDir} onClick={goUp}><IconUp /></button>
           <input
             value={pathInput}
             onChange={(e) => setPathInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && loadDir(pathInput)}
           />
-          <button className="icon-btn" onClick={() => loadDir(remotePath)} title="Refresh"><IconRefresh /></button>
+          <button className="icon-btn" onClick={() => loadDir(remotePath)} title={t.refresh}><IconRefresh /></button>
         </div>
       </div>
 
@@ -123,11 +125,11 @@ function FilePanel({ sessionId }) {
 
       <div className="file-list-wrap">
         {loading ? (
-          <div className="empty-state">Loading…</div>
+          <div className="empty-state">{t.loading}</div>
         ) : (
           <table className="file-table">
             <thead>
-              <tr><th>Name</th><th>Type</th><th>Perms</th><th>Owner</th><th>Size</th><th>Modified</th><th></th></tr>
+              <tr><th>{t.name}</th><th>{t.type}</th><th>{t.sshPerms}</th><th>{t.sshOwner}</th><th>{t.size}</th><th>{t.modified}</th><th></th></tr>
             </thead>
             <tbody>
               {files.map((f) => (
@@ -154,7 +156,7 @@ function FilePanel({ sessionId }) {
                   <td className="cell-muted">{f.mtime || '—'}</td>
                   <td>
                     {!f.isDir && (
-                      <button className="row-btn" onClick={() => handleDownload(f.name)} title="Download">
+                      <button className="row-btn" onClick={() => handleDownload(f.name)} title={t.download}>
                         <IconDownload />
                       </button>
                     )}
@@ -162,7 +164,7 @@ function FilePanel({ sessionId }) {
                 </tr>
               ))}
               {files.length === 0 && !loading && (
-                <tr><td colSpan={7} className="empty-state">Empty directory</td></tr>
+                <tr><td colSpan={7} className="empty-state">{t.sshEmptyDir}</td></tr>
               )}
             </tbody>
           </table>
@@ -178,11 +180,11 @@ function FilePanel({ sessionId }) {
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M8 11V3M4 6l4-4 4 4"/><path d="M2 13h12"/>
         </svg>
-        <span>Drop or click to upload to <code>{remotePath}</code></span>
+        <span>{t.sshDropUpload(remotePath)}</span>
       </div>
       <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleUpload} />
       {uploadStatus && (
-        <div className={`upload-status ${uploadStatus.startsWith('Upload') ? 'ok' : 'err'}`}>
+        <div className={`upload-status ${uploadStatus === t.sshUploadComplete ? 'ok' : 'err'}`}>
           {uploadStatus}
         </div>
       )}
@@ -192,6 +194,7 @@ function FilePanel({ sessionId }) {
 
 // ── SSHWorkspace ──────────────────────────────────────────────────────────────
 export default function SSHWorkspace({ sessionId, setSessionId, connected, setConnected, connInfo, setConnInfo }) {
+  const t = useT();
   const [form, setForm] = useState({ host: '', port: '22', username: '', password: '', logDir: '' });
   const [error, setError] = useState('');
   const [connecting, setConnecting] = useState(false);
@@ -253,7 +256,6 @@ export default function SSHWorkspace({ sessionId, setSessionId, connected, setCo
       xtermRef.current = term;
       fitRef.current = fitAddon;
 
-      // Watch page theme changes and update terminal colors in real time
       themeObserverRef.current = new MutationObserver(() => {
         term.options.theme = getTermTheme();
       });
@@ -271,9 +273,9 @@ export default function SSHWorkspace({ sessionId, setSessionId, connected, setCo
         else if (msg.type === 'connected' && msg.logPath) setLogPath(msg.logPath);
         else if (msg.type === 'log_status') { setLogEnabled(msg.enabled); if (msg.path) setLogPath(msg.path); }
         else if (msg.type === 'error') term.write(`\r\n\x1b[31m${msg.message}\x1b[0m\r\n`);
-        else if (msg.type === 'closed') term.write('\r\n\x1b[33m[Connection closed]\x1b[0m\r\n');
+        else if (msg.type === 'closed') term.write(`\r\n\x1b[33m${t.sshConnClosed}\x1b[0m\r\n`);
       };
-      ws.onclose = () => term.write('\r\n\x1b[33m[WebSocket closed]\x1b[0m\r\n');
+      ws.onclose = () => term.write(`\r\n\x1b[33m${t.sshWsClosed}\x1b[0m\r\n`);
 
       term.onData((d) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: 'data', data: btoa(d) })));
       term.onResize(({ cols, rows }) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: 'resize', cols, rows })));
@@ -293,10 +295,9 @@ export default function SSHWorkspace({ sessionId, setSessionId, connected, setCo
     };
   }, [connected, sessionId]);
 
-  // Re-fit terminal when file panel is toggled
   useEffect(() => {
-    const t = setTimeout(() => fitRef.current?.fit(), 30);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => fitRef.current?.fit(), 30);
+    return () => clearTimeout(timer);
   }, [fileOpen]);
 
   function toggleLog() {
@@ -344,33 +345,33 @@ export default function SSHWorkspace({ sessionId, setSessionId, connected, setCo
       <div className="connect-screen">
         <form className="connect-card" onSubmit={handleConnect} onMouseMove={glassMove}>
           <div className="connect-card-header">
-            <h2>Connect to host</h2>
-            <p>Username and password authentication</p>
+            <h2>{t.sshConnectTitle}</h2>
+            <p>{t.sshAuthMethod}</p>
           </div>
           <div className="field-group">
-            <label>Host</label>
+            <label>{t.sshHost}</label>
             <input placeholder="192.168.1.1" value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })} required />
           </div>
           <div className="field-row">
             <div className="field-group" style={{ width: 90 }}>
-              <label>Port</label>
+              <label>{t.port}</label>
               <input value={form.port} onChange={(e) => setForm({ ...form, port: e.target.value })} />
             </div>
             <div className="field-group" style={{ flex: 1 }}>
-              <label>Username</label>
+              <label>{t.username}</label>
               <input placeholder="root" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
             </div>
           </div>
           <div className="field-group">
-            <label>Password</label>
+            <label>{t.password}</label>
             <input type="password" placeholder="••••••••" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
           </div>
           <div className="field-group">
-            <label>Log directory <span style={{ fontWeight: 400, opacity: 0.55 }}>(optional)</span></label>
+            <label>{t.sshLogDir} <span style={{ fontWeight: 400, opacity: 0.55 }}>{t.authOptional}</span></label>
             <div className="folder-pick-row">
               <input
                 readOnly
-                placeholder="Click Browse to choose a folder…"
+                placeholder={t.sshLogDirPlaceholder}
                 value={form.logDir}
                 style={{ cursor: 'pointer', flex: 1 }}
                 onClick={pickFolder}
@@ -380,17 +381,17 @@ export default function SSHWorkspace({ sessionId, setSessionId, connected, setCo
                 className="btn-secondary folder-pick-btn"
                 onClick={pickFolder}
                 disabled={pickingFolder}
-                title="Browse for folder"
+                title={t.sshBrowse}
               >
                 <IconFolder />
-                {pickingFolder ? 'Picking…' : 'Browse'}
+                {pickingFolder ? t.sshPicking : t.sshBrowse}
               </button>
               {form.logDir && (
                 <button
                   type="button"
                   className="icon-btn"
                   onClick={() => setForm(f => ({ ...f, logDir: '' }))}
-                  title="Clear"
+                  title={t.clear}
                 >
                   <IconClear />
                 </button>
@@ -399,7 +400,7 @@ export default function SSHWorkspace({ sessionId, setSessionId, connected, setCo
           </div>
           {error && <div className="inline-error">{error}</div>}
           <button className="btn-primary" type="submit" disabled={connecting}>
-            {connecting ? 'Connecting…' : 'Connect'}
+            {connecting ? t.sshConnecting : t.connect}
           </button>
         </form>
       </div>
@@ -415,7 +416,6 @@ export default function SSHWorkspace({ sessionId, setSessionId, connected, setCo
           <span className="badge-dot" /> {connInfo?.username}@{connInfo?.host}
         </span>
 
-        {/* Log indicator */}
         {logPath && (
           <div className="log-indicator">
             <span className={`log-dot ${logEnabled ? 'recording' : 'paused'}`} />
@@ -423,7 +423,7 @@ export default function SSHWorkspace({ sessionId, setSessionId, connected, setCo
             <button
               className="icon-btn"
               onClick={toggleLog}
-              title={logEnabled ? 'Pause logging' : 'Resume logging'}
+              title={logEnabled ? t.sshPauseLog : t.sshResumeLog}
             >
               {logEnabled ? <IconPause /> : <IconPlay />}
             </button>
@@ -431,15 +431,14 @@ export default function SSHWorkspace({ sessionId, setSessionId, connected, setCo
               href={`/api/ssh/log/${sessionId}`}
               download={logFileName}
               className="icon-btn"
-              title="Download log"
+              title={t.sshDownloadLog}
             >
               <IconDownload />
             </a>
           </div>
         )}
 
-        {/* File transfer panel toggle */}
-        <button className="btn-danger" onClick={handleDisconnect}>Disconnect</button>
+        <button className="btn-danger" onClick={handleDisconnect}>{t.disconnect}</button>
       </div>
 
       <div className="workspace-body">
@@ -447,20 +446,18 @@ export default function SSHWorkspace({ sessionId, setSessionId, connected, setCo
           <div ref={termRef} className="xterm-host" />
         </div>
 
-        {/* Resize handle — hidden when panel is collapsed */}
         <div
           ref={dragRef}
           className={`resize-handle${fileOpen ? '' : ' resize-handle-hidden'}`}
           onMouseDown={fileOpen ? startResize : undefined}
         />
 
-        {/* File pane — always in DOM, width animated via CSS */}
         <div
           className={`file-pane${fileOpen ? '' : ' file-pane-collapsed'}`}
           style={{ width: fileOpen ? filePaneWidth : 0 }}
           onMouseMove={glassMove}
         >
-          <button className="file-pane-toggle" onClick={() => setFileOpen(false)} title="Collapse file transfer">
+          <button className="file-pane-toggle" onClick={() => setFileOpen(false)} title={t.sshCollapseFiles}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 2l4 4-4 4"/>
             </svg>
@@ -468,10 +465,9 @@ export default function SSHWorkspace({ sessionId, setSessionId, connected, setCo
           <FilePanel sessionId={sessionId} />
         </div>
 
-        {/* Edge zone — only rendered when collapsed, hover to reveal expand button */}
         {!fileOpen && (
           <div className="file-pane-edge-zone">
-            <button className="file-pane-toggle" onClick={() => setFileOpen(true)} title="Expand file transfer">
+            <button className="file-pane-toggle" onClick={() => setFileOpen(true)} title={t.sshExpandFiles}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M8 2L4 6l4 4"/>
               </svg>

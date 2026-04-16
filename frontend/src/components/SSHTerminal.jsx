@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { useT } from '../i18n.js';
 
 export default function SSHTerminal({ sessionId, setSessionId, connected, setConnected }) {
+  const t = useT();
   const [form, setForm] = useState({ host: '', port: '22', username: '', password: '' });
   const [error, setError] = useState('');
   const [connecting, setConnecting] = useState(false);
@@ -10,7 +12,6 @@ export default function SSHTerminal({ sessionId, setSessionId, connected, setCon
   const wsRef = useRef(null);
   const fitRef = useRef(null);
 
-  // Boot xterm once connected
   useEffect(() => {
     if (!connected || !sessionId) return;
 
@@ -39,10 +40,10 @@ export default function SSHTerminal({ sessionId, setSessionId, connected, setCon
         const msg = JSON.parse(e.data);
         if (msg.type === 'data') term.write(atob(msg.data));
         else if (msg.type === 'error') { term.write(`\r\n\x1b[31m${msg.message}\x1b[0m\r\n`); }
-        else if (msg.type === 'closed') { term.write('\r\n\x1b[33m[Connection closed]\x1b[0m\r\n'); }
+        else if (msg.type === 'closed') { term.write(`\r\n\x1b[33m${t.sshConnClosed}\x1b[0m\r\n`); }
       };
 
-      ws.onclose = () => term.write('\r\n\x1b[33m[WebSocket closed]\x1b[0m\r\n');
+      ws.onclose = () => term.write(`\r\n\x1b[33m${t.sshWsClosed}\x1b[0m\r\n`);
 
       term.onData((data) => {
         if (ws.readyState === WebSocket.OPEN)
@@ -99,16 +100,16 @@ export default function SSHTerminal({ sessionId, setSessionId, connected, setCon
   if (!connected) {
     return (
       <form className="connect-form" onSubmit={handleConnect}>
-        <h2>SSH Connect</h2>
-        <input placeholder="Host / IP" value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })} required />
+        <h2>{t.sshTermTitle}</h2>
+        <input placeholder={t.sshHostIp} value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })} required />
         <div className="form-row">
-          <input placeholder="Port" value={form.port} onChange={(e) => setForm({ ...form, port: e.target.value })} style={{ width: 80 }} />
-          <input placeholder="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
+          <input placeholder={t.port} value={form.port} onChange={(e) => setForm({ ...form, port: e.target.value })} style={{ width: 80 }} />
+          <input placeholder={t.username} value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
         </div>
-        <input type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+        <input type="password" placeholder={t.password} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
         {error && <span className="error-msg">{error}</span>}
         <button className="primary" type="submit" disabled={connecting}>
-          {connecting ? 'Connecting…' : 'Connect'}
+          {connecting ? t.sshConnecting : t.connect}
         </button>
       </form>
     );
@@ -120,7 +121,7 @@ export default function SSHTerminal({ sessionId, setSessionId, connected, setCon
         <span style={{ fontSize: 12, color: '#8b949e' }}>
           {form.username}@{form.host}:{form.port}
         </span>
-        <button className="danger" onClick={handleDisconnect}>Disconnect</button>
+        <button className="danger" onClick={handleDisconnect}>{t.disconnect}</button>
       </div>
       <div id="xterm-container" ref={termRef} style={{ flex: 1 }} />
     </div>

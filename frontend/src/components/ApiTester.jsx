@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
+import { useT } from '../i18n.js';
 
 // ── constants ─────────────────────────────────────────────────────────────────
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
@@ -112,7 +113,10 @@ function MethodSelect({ value, onChange }) {
 }
 
 // ── KVTable ───────────────────────────────────────────────────────────────────
-function KVTable({ rows, onChange, keyPlaceholder = 'Key', valPlaceholder = 'Value' }) {
+function KVTable({ rows, onChange, keyPlaceholder, valPlaceholder }) {
+  const t = useT();
+  const kp = keyPlaceholder ?? 'Key';
+  const vp = valPlaceholder ?? t.apiValue;
   function update(i, field, val) { onChange(rows.map((r, idx) => idx === i ? { ...r, [field]: val } : r)); }
   function remove(i) { onChange(rows.filter((_, idx) => idx !== i)); }
   function add() { onChange([...rows, { id: uid(), key: '', value: '', enabled: true }]); }
@@ -121,8 +125,8 @@ function KVTable({ rows, onChange, keyPlaceholder = 'Key', valPlaceholder = 'Val
       {rows.map((r, i) => (
         <div key={r.id} className="kv-row">
           <input type="checkbox" className="kv-check" checked={r.enabled !== false} onChange={e => update(i, 'enabled', e.target.checked)} />
-          <input className="kv-input" placeholder={keyPlaceholder} value={r.key} onChange={e => update(i, 'key', e.target.value)} />
-          <input className="kv-input" placeholder={valPlaceholder} value={r.value} onChange={e => update(i, 'value', e.target.value)} />
+          <input className="kv-input" placeholder={kp} value={r.key} onChange={e => update(i, 'key', e.target.value)} />
+          <input className="kv-input" placeholder={vp} value={r.value} onChange={e => update(i, 'value', e.target.value)} />
           <button className="kv-del" onClick={() => remove(i)} title="Remove">×</button>
         </div>
       ))}
@@ -133,6 +137,7 @@ function KVTable({ rows, onChange, keyPlaceholder = 'Key', valPlaceholder = 'Val
 
 // ── JsonEditor ────────────────────────────────────────────────────────────────
 function JsonEditor({ value, onChange }) {
+  const t = useT();
   const [err, setErr] = useState('');
   function format() {
     try { onChange(JSON.stringify(JSON.parse(value), null, 2)); setErr(''); }
@@ -142,9 +147,9 @@ function JsonEditor({ value, onChange }) {
     <div className="json-editor-wrap">
       <div className="json-editor-toolbar">
         <span className={`json-valid-badge ${isJson(value) ? 'ok' : value ? 'err' : ''}`}>
-          {value ? (isJson(value) ? 'Valid JSON' : 'Invalid JSON') : ''}
+          {value ? (isJson(value) ? t.apiValidJson : t.apiInvalidJson) : ''}
         </span>
-        <button className="btn-xs" onClick={format}>Format</button>
+        <button className="btn-xs" onClick={format}>{t.format}</button>
       </div>
       <textarea className="json-editor" value={value} onChange={e => { onChange(e.target.value); setErr(''); }}
         spellCheck={false} placeholder={'{\n  "key": "value"\n}'} />
@@ -155,36 +160,39 @@ function JsonEditor({ value, onChange }) {
 
 // ── AuthPanel ─────────────────────────────────────────────────────────────────
 function AuthPanel({ auth, onChange }) {
+  const t = useT();
   const { type = 'none', token = '', username = '', password = '', keyName = 'X-API-Key', keyValue = '', addTo = 'header' } = auth;
   function set(field, val) { onChange({ ...auth, [field]: val }); }
+
+  const authLabels = { none: t.apiNone, bearer: t.apiBearerToken, basic: t.basicAuth, apikey: t.apiApiKey };
 
   return (
     <div className="auth-panel">
       <div className="auth-type-bar">
-        {AUTH_TYPES.map(t => (
-          <button key={t} type="button"
-            className={`body-type-btn ${type === t ? 'active' : ''}`}
-            onClick={() => set('type', t)}>
-            {t === 'none' ? 'None' : t === 'bearer' ? 'Bearer Token' : t === 'basic' ? 'Basic Auth' : 'API Key'}
+        {AUTH_TYPES.map(at => (
+          <button key={at} type="button"
+            className={`body-type-btn ${type === at ? 'active' : ''}`}
+            onClick={() => set('type', at)}>
+            {authLabels[at]}
           </button>
         ))}
       </div>
 
       {type === 'bearer' && (
         <div className="auth-fields">
-          <label className="auth-label">Token</label>
+          <label className="auth-label">{t.apiToken}</label>
           <input className="auth-input" type="password" placeholder="eyJhbGci…" value={token} onChange={e => set('token', e.target.value)} />
-          <p className="auth-hint">Sent as: <code>Authorization: Bearer {'{token}'}</code></p>
+          <p className="auth-hint">{t.apiBearerSentAs('{token}')}</p>
         </div>
       )}
 
       {type === 'basic' && (
         <div className="auth-fields">
-          <label className="auth-label">Username</label>
+          <label className="auth-label">{t.username}</label>
           <input className="auth-input" placeholder="username" value={username} onChange={e => set('username', e.target.value)} />
-          <label className="auth-label" style={{ marginTop: 8 }}>Password</label>
+          <label className="auth-label" style={{ marginTop: 8 }}>{t.password}</label>
           <input className="auth-input" type="password" placeholder="password" value={password} onChange={e => set('password', e.target.value)} />
-          <p className="auth-hint">Sent as: <code>Authorization: Basic {'{base64}'}</code></p>
+          <p className="auth-hint">{t.apiBasicSentAs('{base64}')}</p>
         </div>
       )}
 
@@ -192,19 +200,19 @@ function AuthPanel({ auth, onChange }) {
         <div className="auth-fields">
           <div className="auth-row">
             <div style={{ flex: 1 }}>
-              <label className="auth-label">Key name</label>
+              <label className="auth-label">{t.apiKeyName}</label>
               <input className="auth-input" placeholder="X-API-Key" value={keyName} onChange={e => set('keyName', e.target.value)} />
             </div>
             <div style={{ flex: 2 }}>
-              <label className="auth-label">Value</label>
+              <label className="auth-label">{t.apiValue}</label>
               <input className="auth-input" type="password" placeholder="your-key" value={keyValue} onChange={e => set('keyValue', e.target.value)} />
             </div>
           </div>
           <div className="auth-add-to">
-            <span className="auth-label">Add to</span>
+            <span className="auth-label">{t.apiAddTo}</span>
             {['header', 'query'].map(opt => (
               <label key={opt} className="auth-radio">
-                <input type="radio" checked={addTo === opt} onChange={() => set('addTo', opt)} /> {opt}
+                <input type="radio" checked={addTo === opt} onChange={() => set('addTo', opt)} /> {opt === 'header' ? t.apiHeader : t.apiQuery}
               </label>
             ))}
           </div>
@@ -212,7 +220,7 @@ function AuthPanel({ auth, onChange }) {
       )}
 
       {type === 'none' && (
-        <p className="auth-hint" style={{ marginTop: 10 }}>No authentication will be sent with this request.</p>
+        <p className="auth-hint" style={{ marginTop: 10 }}>{t.apiNoAuth}</p>
       )}
     </div>
   );
@@ -224,12 +232,13 @@ function ResponseBody({ body, contentType }) {
   return <pre className={`resp-body ${isJ ? 'resp-json' : ''}`}>{isJ ? tryPrettyJson(body) : body}</pre>;
 }
 
-// ── HistoryPanel / SavedPanel / EnvPanel (unchanged) ──────────────────────────
+// ── HistoryPanel / SavedPanel / EnvPanel ──────────────────────────────────────
 function HistoryPanel({ history, onLoad, onClear }) {
-  if (!history.length) return <div className="side-empty">No history yet</div>;
+  const t = useT();
+  if (!history.length) return <div className="side-empty">{t.apiNoHistory}</div>;
   return (
     <div className="side-list">
-      <div className="side-list-header"><span>History</span><button className="btn-xs danger" onClick={onClear}>Clear</button></div>
+      <div className="side-list-header"><span>{t.apiHistory}</span><button className="btn-xs danger" onClick={onClear}>{t.clear}</button></div>
       {history.map(h => (
         <button key={h.id} className="side-item" onClick={() => onLoad(h)}>
           <span className={`method-badge sm ${h.method.toLowerCase()}`}>{h.method}</span>
@@ -241,10 +250,11 @@ function HistoryPanel({ history, onLoad, onClear }) {
   );
 }
 function SavedPanel({ saved, onLoad, onDelete }) {
-  if (!saved.length) return <div className="side-empty">No saved requests</div>;
+  const t = useT();
+  if (!saved.length) return <div className="side-empty">{t.apiNoSaved}</div>;
   return (
     <div className="side-list">
-      <div className="side-list-header"><span>Saved</span></div>
+      <div className="side-list-header"><span>{t.apiSaved}</span></div>
       {saved.map(s => (
         <div key={s.id} className="side-item-row">
           <button className="side-item" style={{ flex: 1 }} onClick={() => onLoad(s)}>
@@ -258,11 +268,12 @@ function SavedPanel({ saved, onLoad, onDelete }) {
   );
 }
 function EnvPanel({ envs, onChange }) {
+  const t = useT();
   return (
     <div className="side-list">
-      <div className="side-list-header"><span>Environment Variables</span></div>
+      <div className="side-list-header"><span>{t.apiEnvVars}</span></div>
       <div style={{ padding: '0 8px 8px' }}>
-        <KVTable rows={envs} onChange={onChange} keyPlaceholder="Variable" valPlaceholder="Value" />
+        <KVTable rows={envs} onChange={onChange} keyPlaceholder={t.apiVariable} valPlaceholder={t.apiValue} />
       </div>
     </div>
   );
@@ -270,6 +281,7 @@ function EnvPanel({ envs, onChange }) {
 
 // ── main ──────────────────────────────────────────────────────────────────────
 export default function ApiTester() {
+  const t = useT();
   const [method,   setMethod]   = useState('GET');
   const [url,      setUrl]      = useState('');
   const [reqTab,   setReqTab]   = useState('params');
@@ -397,13 +409,15 @@ export default function ApiTester() {
   }
 
   function saveRequest() {
-    const name = prompt('Save as:', url);
+    const name = prompt(t.apiSaveRequest + ':', url);
     if (!name) return;
     const entry = { id: uid(), name, method, url, params, reqHeaders, auth, bodyTab, jsonBody, formBody, rawBody };
     setSaved(s => [entry, ...s]);
   }
 
-  const REQ_TABS = ['params', 'headers', 'auth', 'body'];
+  const reqTabLabels = { params: t.apiParams, headers: t.headers, auth: t.apiAuth, body: t.body };
+  const respTabLabels = { body: t.body, headers: t.headers, cookies: t.apiCookies, redirects: t.apiRedirects };
+  const bodyTabLabels = { none: t.apiNoBody, json: t.apiJson, form: t.apiForm, raw: t.apiRaw };
   const respContentType = response?.headers?.['content-type'] || '';
 
   return (
@@ -414,15 +428,15 @@ export default function ApiTester() {
         <MethodSelect value={method} onChange={setMethod} />
         <input
           className="url-input"
-          placeholder="https://api.example.com/endpoint  (supports {{VAR}})"
+          placeholder={t.apiUrlPlaceholder}
           value={url}
           onChange={e => setUrl(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && send()}
         />
         <button className="btn-send" onClick={send} disabled={loading} type="button">
-          {loading ? <span className="spinner-sm" /> : 'Send'}
+          {loading ? <span className="spinner-sm" /> : t.send}
         </button>
-        <button className="btn-save-req" onClick={saveRequest} title="Save request" type="button">
+        <button className="btn-save-req" onClick={saveRequest} title={t.apiSaveRequest} type="button">
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M13 1H3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V4l-3-3z"/><path d="M11 1v4H5V1M5 9h6M5 12h4"/>
           </svg>
@@ -433,15 +447,15 @@ export default function ApiTester() {
       <div className="api-options-row">
         <label className="api-opt-check">
           <input type="checkbox" checked={followRedirects} onChange={e => setFollowRedirects(e.target.checked)} />
-          <span className="api-opt-check-label">Follow redirects</span>
+          <span className="api-opt-check-label">{t.apiFollowRedirects}</span>
         </label>
-        <span className="api-shortcut-hint">Ctrl+Enter to send</span>
+        <span className="api-shortcut-hint">{t.apiCtrlEnter}</span>
         <div style={{ flex: 1 }} />
         {['history', 'saved', 'env'].map(p => (
           <button key={p} type="button"
             className={`btn-side-toggle ${sidePanel === p ? 'active' : ''}`}
             onClick={() => setSidePanel(sidePanel === p ? null : p)}>
-            {p === 'history' ? 'History' : p === 'saved' ? 'Saved' : 'Env'}
+            {p === 'history' ? t.apiHistory : p === 'saved' ? t.apiSaved : t.apiEnv}
           </button>
         ))}
       </div>
@@ -452,32 +466,32 @@ export default function ApiTester() {
           {/* ── Request panel ── */}
           <div className="api-section">
             <div className="tab-bar">
-              {REQ_TABS.map(t => (
-                <button key={t} className={`tab-btn ${reqTab === t ? 'active' : ''}`} onClick={() => setReqTab(t)} type="button">
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
-                  {t === 'params' && params.filter(p => p.key).length > 0 && <span className="tab-badge">{params.filter(p => p.key).length}</span>}
-                  {t === 'headers' && reqHeaders.filter(h => h.key).length > 0 && <span className="tab-badge">{reqHeaders.filter(h => h.key).length}</span>}
-                  {t === 'auth' && auth.type !== 'none' && <span className="tab-badge auth-badge">ON</span>}
+              {['params', 'headers', 'auth', 'body'].map(tab => (
+                <button key={tab} className={`tab-btn ${reqTab === tab ? 'active' : ''}`} onClick={() => setReqTab(tab)} type="button">
+                  {reqTabLabels[tab]}
+                  {tab === 'params' && params.filter(p => p.key).length > 0 && <span className="tab-badge">{params.filter(p => p.key).length}</span>}
+                  {tab === 'headers' && reqHeaders.filter(h => h.key).length > 0 && <span className="tab-badge">{reqHeaders.filter(h => h.key).length}</span>}
+                  {tab === 'auth' && auth.type !== 'none' && <span className="tab-badge auth-badge">ON</span>}
                 </button>
               ))}
             </div>
             <div className="tab-content">
-              {reqTab === 'params'  && <KVTable rows={params} onChange={setParams} keyPlaceholder="Parameter" />}
+              {reqTab === 'params'  && <KVTable rows={params} onChange={setParams} keyPlaceholder={t.apiParameter} />}
               {reqTab === 'headers' && <KVTable rows={reqHeaders} onChange={setReqHeaders} keyPlaceholder="Header" />}
               {reqTab === 'auth'    && <AuthPanel auth={auth} onChange={setAuth} />}
               {reqTab === 'body'    && (
                 <div className="body-section">
                   <div className="body-type-bar">
-                    {BODY_TABS.map(t => (
-                      <button key={t} type="button" className={`body-type-btn ${bodyTab === t ? 'active' : ''}`} onClick={() => setBodyTab(t)}>
-                        {t === 'none' ? 'None' : t === 'json' ? 'JSON' : t === 'form' ? 'Form' : 'Raw'}
+                    {BODY_TABS.map(tab => (
+                      <button key={tab} type="button" className={`body-type-btn ${bodyTab === tab ? 'active' : ''}`} onClick={() => setBodyTab(tab)}>
+                        {bodyTabLabels[tab]}
                       </button>
                     ))}
                   </div>
                   {bodyTab === 'json' && <JsonEditor value={jsonBody} onChange={setJsonBody} />}
-                  {bodyTab === 'form' && <KVTable rows={formBody} onChange={setFormBody} keyPlaceholder="Field" />}
-                  {bodyTab === 'raw'  && <textarea className="raw-editor" value={rawBody} onChange={e => setRawBody(e.target.value)} placeholder="Request body…" spellCheck={false} />}
-                  {bodyTab === 'none' && <div className="body-none-msg">No body</div>}
+                  {bodyTab === 'form' && <KVTable rows={formBody} onChange={setFormBody} keyPlaceholder={t.apiField} />}
+                  {bodyTab === 'raw'  && <textarea className="raw-editor" value={rawBody} onChange={e => setRawBody(e.target.value)} placeholder={t.apiBodyPlaceholder} spellCheck={false} />}
+                  {bodyTab === 'none' && <div className="body-none-msg">{t.apiNoBody}</div>}
                 </div>
               )}
             </div>
@@ -486,9 +500,9 @@ export default function ApiTester() {
           {/* ── Response panel ── */}
           <div className="api-section resp-section">
             {!response && !error && !loading && (
-              <div className="resp-empty">Send a request to see the response</div>
+              <div className="resp-empty">{t.apiEmptyResponse}</div>
             )}
-            {loading && <div className="resp-empty"><span className="spinner-sm" /> Sending…</div>}
+            {loading && <div className="resp-empty"><span className="spinner-sm" /> {t.apiSending}</div>}
             {error   && <div className="resp-error">{error}</div>}
             {response && (
               <>
@@ -500,11 +514,11 @@ export default function ApiTester() {
                   <span className="resp-size">{fmtSize(response.size)}</span>
                 </div>
                 <div className="tab-bar">
-                  {RESP_TABS.map(t => (
-                    <button key={t} className={`tab-btn ${respTab === t ? 'active' : ''}`} onClick={() => setRespTab(t)} type="button">
-                      {t.charAt(0).toUpperCase() + t.slice(1)}
-                      {t === 'redirects' && response.redirects?.length > 0 && <span className="tab-badge">{response.redirects.length}</span>}
-                      {t === 'cookies'   && response.cookies?.length   > 0 && <span className="tab-badge">{response.cookies.length}</span>}
+                  {RESP_TABS.map(tab => (
+                    <button key={tab} className={`tab-btn ${respTab === tab ? 'active' : ''}`} onClick={() => setRespTab(tab)} type="button">
+                      {respTabLabels[tab]}
+                      {tab === 'redirects' && response.redirects?.length > 0 && <span className="tab-badge">{response.redirects.length}</span>}
+                      {tab === 'cookies'   && response.cookies?.length   > 0 && <span className="tab-badge">{response.cookies.length}</span>}
                     </button>
                   ))}
                 </div>
@@ -519,7 +533,7 @@ export default function ApiTester() {
                   )}
                   {respTab === 'cookies' && (
                     <div className="resp-cookies">
-                      {response.cookies?.length ? response.cookies.map((c, i) => <div key={i} className="cookie-row">{c}</div>) : <div className="resp-empty">No cookies</div>}
+                      {response.cookies?.length ? response.cookies.map((c, i) => <div key={i} className="cookie-row">{c}</div>) : <div className="resp-empty">{t.apiNoCookies}</div>}
                     </div>
                   )}
                   {respTab === 'redirects' && (
@@ -531,7 +545,7 @@ export default function ApiTester() {
                           <span className="redirect-arrow">→</span>
                           <span className="redirect-loc">{r.location}</span>
                         </div>
-                      )) : <div className="resp-empty">No redirects</div>}
+                      )) : <div className="resp-empty">{t.apiNoRedirects}</div>}
                     </div>
                   )}
                 </div>

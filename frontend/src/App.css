@@ -2358,3 +2358,25 @@ a.icon-btn {
 .settings-toggle.on .settings-toggle-thumb { transform: translateX(18px); }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Language selector ── */
+.lang-selector {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;
+}
+.lang-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: var(--r-sm);
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  color: var(--text-2); font-size: 13px; cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.lang-btn:hover { border-color: var(--accent, #58a6ff); color: var(--text-1); }
+.lang-btn.selected {
+  border-color: var(--accent, #58a6ff); color: var(--accent, #58a6ff);
+  background: rgba(88,166,255,0.08);
+}
+.lang-btn-check {
+  display: flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent, #58a6ff); color: #fff; flex-shrink: 0;
+}

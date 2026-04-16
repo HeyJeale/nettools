@@ -1,44 +1,46 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { useT } from '../i18n.js';
 
 const PAGE_SIZE = 50;
 
-const BODY_FIELDS = [
-  { key: 'plate',            label: 'Plate' },
-  { key: 'type',             label: 'Type' },
-  { key: 'plateColor',       label: 'Plate Color' },
-  { key: 'vehicleType',      label: 'Vehicle Type' },
-  { key: 'vehicleColor',     label: 'Vehicle Color' },
-  { key: 'vehicleBrand',     label: 'Vehicle Brand' },
-  { key: 'confidence',       label: 'Confidence' },
-  { key: 'speed',            label: 'Speed' },
-  { key: 'direction',        label: 'Direction' },
-  { key: 'detectionRegion',  label: 'Detection Region' },
-  { key: 'region',           label: 'Region' },
-  { key: 'device',           label: 'Device' },
-  { key: 'time',             label: 'Time' },
-  { key: 'timeMsec',         label: 'Time mSec' },
-  { key: 'resolutionWidth',  label: 'Res Width' },
-  { key: 'resolutionHeight', label: 'Res Height' },
-  { key: 'coordinateX1',    label: 'X1' },
-  { key: 'coordinateY1',    label: 'Y1' },
-  { key: 'coordinateX2',    label: 'X2' },
-  { key: 'coordinateY2',    label: 'Y2' },
+// Field keys for body display and filter — labels resolved via t.* at render time
+const BODY_FIELD_KEYS = [
+  { key: 'plate',            tKey: 'plate' },
+  { key: 'type',             tKey: 'type' },
+  { key: 'plateColor',       tKey: 'plateColor' },
+  { key: 'vehicleType',      tKey: 'vehicleType' },
+  { key: 'vehicleColor',     tKey: 'vehicleColor' },
+  { key: 'vehicleBrand',     tKey: 'vehicleBrand' },
+  { key: 'confidence',       tKey: 'confidence' },
+  { key: 'speed',            tKey: 'speed' },
+  { key: 'direction',        tKey: 'direction' },
+  { key: 'detectionRegion',  tKey: 'detectionRegion' },
+  { key: 'region',           tKey: 'region' },
+  { key: 'device',           tKey: 'device' },
+  { key: 'time',             tKey: 'time' },
+  { key: 'timeMsec',         tKey: 'timeMsec' },
+  { key: 'resolutionWidth',  tKey: 'resWidth' },
+  { key: 'resolutionHeight', tKey: 'resHeight' },
+  { key: 'coordinateX1',    tKey: null, label: 'X1' },
+  { key: 'coordinateY1',    tKey: null, label: 'Y1' },
+  { key: 'coordinateX2',    tKey: null, label: 'X2' },
+  { key: 'coordinateY2',    tKey: null, label: 'Y2' },
 ];
 
-const FILTER_FIELDS = [
-  { key: 'plate',           label: 'Plate' },
-  { key: 'type',            label: 'Type' },
-  { key: 'plateColor',      label: 'Plate Color' },
-  { key: 'vehicleType',     label: 'Vehicle Type' },
-  { key: 'vehicleColor',    label: 'Vehicle Color' },
-  { key: 'vehicleBrand',    label: 'Vehicle Brand' },
-  { key: 'confidence',      label: 'Confidence' },
-  { key: 'speed',           label: 'Speed' },
-  { key: 'direction',       label: 'Direction' },
-  { key: 'detectionRegion', label: 'Detection Region' },
-  { key: 'region',          label: 'Region' },
-  { key: 'device',          label: 'Device' },
+const FILTER_FIELD_KEYS = [
+  { key: 'plate',           tKey: 'plate' },
+  { key: 'type',            tKey: 'type' },
+  { key: 'plateColor',      tKey: 'plateColor' },
+  { key: 'vehicleType',     tKey: 'vehicleType' },
+  { key: 'vehicleColor',    tKey: 'vehicleColor' },
+  { key: 'vehicleBrand',    tKey: 'vehicleBrand' },
+  { key: 'confidence',      tKey: 'confidence' },
+  { key: 'speed',           tKey: 'speed' },
+  { key: 'direction',       tKey: 'direction' },
+  { key: 'detectionRegion', tKey: 'detectionRegion' },
+  { key: 'region',          tKey: 'region' },
+  { key: 'device',          tKey: 'device' },
 ];
 
 const EMPTY_FILTERS = {
@@ -54,7 +56,7 @@ function hasActiveFilter(f) {
 
 function applyFilters(records, filters) {
   return records.filter(r => {
-    for (const { key } of FILTER_FIELDS) {
+    for (const { key } of FILTER_FIELD_KEYS) {
       const fval = filters[key]?.trim();
       if (!fval) continue;
       if (!(r[key] ?? '').toString().toLowerCase().includes(fval.toLowerCase())) return false;
@@ -69,6 +71,7 @@ function applyFilters(records, filters) {
 
 // ── Single record card ────────────────────────────────────────────────────────
 function AnprCard({ record, instanceId, onImgClick }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   return (
@@ -94,11 +97,11 @@ function AnprCard({ record, instanceId, onImgClick }) {
               <div className="anpr-card-imgs">
                 {Array.from({ length: record.imageCount }, (_, i) => {
                   const src = `/api/anpr/image/${instanceId}/${record.id}/${i}`;
-                  const label = i === 0 ? 'Plate Image' : 'Full Image';
+                  const label = i === 0 ? t.plateImage : t.fullImage;
                   return (
                     <div key={i} className="anpr-img-wrap">
                       <span className="anpr-cell-label">{label}</span>
-                      <img className="anpr-card-img" src={src} alt={label} title="Click to view / save"
+                      <img className="anpr-card-img" src={src} alt={label} title={t.clickToView}
                         onClick={() => onImgClick({ src, label, record })} />
                     </div>
                   );
@@ -106,9 +109,9 @@ function AnprCard({ record, instanceId, onImgClick }) {
               </div>
             )}
             <div className="anpr-card-grid">
-              {BODY_FIELDS.filter(f => record[f.key] != null).map(f => (
+              {BODY_FIELD_KEYS.filter(f => record[f.key] != null).map(f => (
                 <div key={f.key} className="anpr-cell">
-                  <span className="anpr-cell-label">{f.label}</span>
+                  <span className="anpr-cell-label">{f.tKey ? t[f.tKey] : f.label}</span>
                   <span className="anpr-cell-value">{record[f.key]}</span>
                 </div>
               ))}
@@ -122,6 +125,7 @@ function AnprCard({ record, instanceId, onImgClick }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function AnprServer() {
+  const t = useT();
   const [port,     setPort]     = useState('8080');
   const [path,     setPath]     = useState('/httpServer');
   const [authUser, setAuthUser] = useState('');
@@ -131,7 +135,6 @@ export default function AnprServer() {
   const [instanceId,  setInstanceId]  = useState(null);
   const [serverInfo,  setServerInfo]  = useState(null);
   const [error,       setError]       = useState('');
-  // allRecords: accumulates all records in this session, each with stable _seq
   const [allRecords,  setAllRecords]  = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [onLivePage,  setOnLivePage]  = useState(true);
@@ -144,7 +147,7 @@ export default function AnprServer() {
   const wsRef       = useRef(null);
   const bottomRef   = useRef(null);
   const instanceRef = useRef(null);
-  const seqRef      = useRef(0); // monotonically increasing across this session
+  const seqRef      = useRef(0);
 
   const totalPages  = Math.max(1, Math.ceil(allRecords.length / PAGE_SIZE));
   const isLivePage  = onLivePage;
@@ -153,7 +156,6 @@ export default function AnprServer() {
   const filtered    = applyFilters(pageRecords, filters);
   const isFiltered  = hasActiveFilter(filters);
 
-  // Auto-advance to last page when on live page and new record arrives
   useEffect(() => {
     if (onLivePage) setCurrentPage(totalPages);
   }, [totalPages, onLivePage]);
@@ -253,26 +255,26 @@ export default function AnprServer() {
       <div className="hs-config-bar">
         <div className="hs-config-fields">
           <div className="hs-field hs-field-port">
-            <label className="hs-label">Port</label>
+            <label className="hs-label">{t.port}</label>
             <input className="hs-input" value={port}
               onChange={e => setPort(e.target.value.replace(/\D/g, ''))}
               disabled={running} placeholder="8080" />
           </div>
           <div className="hs-field" style={{ flex: 2 }}>
-            <label className="hs-label">Context path</label>
+            <label className="hs-label">{t.anprContextPath}</label>
             <input className="hs-input" value={path}
               onChange={e => setPath(e.target.value)}
               disabled={running} placeholder="/httpServer" />
           </div>
           <div className="hs-field-sep" />
           <div className="hs-field">
-            <label className="hs-label">Auth user <span className="hs-optional">(optional)</span></label>
+            <label className="hs-label">{t.authUser} <span className="hs-optional">{t.authOptional}</span></label>
             <input className="hs-input" value={authUser}
               onChange={e => setAuthUser(e.target.value)}
               disabled={running} placeholder="username" autoComplete="off" />
           </div>
           <div className="hs-field">
-            <label className="hs-label">Auth password</label>
+            <label className="hs-label">{t.authPassword}</label>
             <input className="hs-input" type="password" value={authPass}
               onChange={e => setAuthPass(e.target.value)}
               disabled={running} placeholder="••••••••" autoComplete="off" />
@@ -282,12 +284,12 @@ export default function AnprServer() {
           {!running ? (
             <button className="btn-primary hs-start-btn" onClick={handleStart}>
               <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2.5l10 5.5-10 5.5V2.5z"/></svg>
-              Start
+              {t.start}
             </button>
           ) : (
             <button className="btn-danger hs-stop-btn" onClick={handleStop}>
               <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="2" width="12" height="12" rx="2"/></svg>
-              Stop
+              {t.stop}
             </button>
           )}
         </div>
@@ -300,23 +302,22 @@ export default function AnprServer() {
         <div className="hs-status-bar">
           <span className="hs-status-dot" />
           <span className="hs-status-text">
-            Listening on port <strong>{serverInfo.port}</strong> → <code>{serverInfo.path}</code>
-            {authUser.trim() && <span className="hs-auth-badge">Basic Auth</span>}
+            {t.anprListening(serverInfo.port, serverInfo.path)}
+            {authUser.trim() && <span className="hs-auth-badge">{t.basicAuth}</span>}
           </span>
           <div style={{ flex: 1 }} />
           <span className="hs-req-count">
             {isFiltered
               ? `${filtered.length} / ${pageRecords.length}`
-              : allRecords.length
+              : t.records(allRecords.length)
             }
-            {' '}record{allRecords.length !== 1 ? 's' : ''}
           </span>
           <label className="api-opt-check">
             <input type="checkbox" checked={autoScroll} onChange={e => setAutoScroll(e.target.checked)} />
-            <span className="api-opt-check-label">Auto-scroll</span>
+            <span className="api-opt-check-label">{t.autoScroll}</span>
           </label>
           {allRecords.length > 0 && (
-            <button className="btn-xs danger" onClick={handleClear}>Clear</button>
+            <button className="btn-xs danger" onClick={handleClear}>{t.clear}</button>
           )}
         </div>
       )}
@@ -330,11 +331,11 @@ export default function AnprServer() {
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M2 4h12M5 8h6M8 12h0"/>
           </svg>
-          Filter
+          {t.filter}
           {isFiltered && <span className="anpr-filter-dot" />}
         </button>
         {isFiltered && (
-          <button className="btn-xs" onClick={() => setFilters(EMPTY_FILTERS)}>Clear filters</button>
+          <button className="btn-xs" onClick={() => setFilters(EMPTY_FILTERS)}>{t.clearFilters}</button>
         )}
       </div>
 
@@ -343,20 +344,20 @@ export default function AnprServer() {
         <div className="anpr-filter-panel">
           <div className="anpr-filter-panel-inner">
             <div className="anpr-filter-grid">
-              {FILTER_FIELDS.map(f => (
+              {FILTER_FIELD_KEYS.map(f => (
                 <div key={f.key} className="anpr-filter-cell">
-                  <label className="anpr-cell-label">{f.label}</label>
+                  <label className="anpr-cell-label">{t[f.tKey]}</label>
                   <input className="anpr-filter-input" value={filters[f.key]}
-                    onChange={e => setFilter(f.key, e.target.value)} placeholder="contains…" />
+                    onChange={e => setFilter(f.key, e.target.value)} placeholder={t.contains} />
                 </div>
               ))}
               <div className="anpr-filter-cell">
-                <label className="anpr-cell-label">Time — Start</label>
+                <label className="anpr-cell-label">{t.timeStart}</label>
                 <input className="anpr-filter-input" value={filters.timeStart}
                   onChange={e => setFilter('timeStart', e.target.value)} placeholder="2024-01-01 00:00:00" />
               </div>
               <div className="anpr-filter-cell">
-                <label className="anpr-cell-label">Time — End</label>
+                <label className="anpr-cell-label">{t.timeEnd}</label>
                 <input className="anpr-filter-input" value={filters.timeEnd}
                   onChange={e => setFilter('timeEnd', e.target.value)} placeholder="2024-12-31 23:59:59" />
               </div>
@@ -373,13 +374,13 @@ export default function AnprServer() {
               <rect x="3" y="6" width="18" height="13" rx="2"/>
               <path d="M3 10h18M8 6V4M16 6V4"/>
             </svg>
-            <p>Configure and start the ANPR server to receive records</p>
+            <p>{t.anprEmpty}</p>
           </div>
         )}
         {allRecords.length === 0 && running && (
           <div className="hs-empty">
             <span className="hs-pulse-ring" />
-            <p>Waiting for ANPR records…</p>
+            <p>{t.anprWaiting}</p>
           </div>
         )}
         {isFiltered && filtered.length === 0 && pageRecords.length > 0 && (
@@ -387,7 +388,7 @@ export default function AnprServer() {
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.25">
               <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
             </svg>
-            <p>No records match the current filters</p>
+            <p>{t.noRecordsMatch}</p>
           </div>
         )}
         {filtered.map(r => (
@@ -403,7 +404,7 @@ export default function AnprServer() {
             <button className="anpr-page-btn" disabled={currentPage <= 1}
               onClick={() => goToPage(currentPage - 1)}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M7.5 2L3 6l4.5 4"/></svg>
-              Prev
+              {t.prev}
             </button>
             <span className="anpr-page-info">
               {isLivePage && <span className="anpr-live-dot" />}
@@ -411,12 +412,12 @@ export default function AnprServer() {
             </span>
             <button className="anpr-page-btn" disabled={isLivePage}
               onClick={() => goToPage(currentPage + 1)}>
-              Next
+              {t.next}
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4.5 2L9 6l-4.5 4"/></svg>
             </button>
             {!isLivePage && (
               <button className="anpr-page-btn anpr-page-latest" onClick={() => goToPage(totalPages)}>
-                Latest
+                {t.latest}
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 6h7M6 3l4 3-4 3"/></svg>
               </button>
             )}
@@ -437,7 +438,7 @@ export default function AnprServer() {
                     const name = [r.device, r.time, r.plate, imgModal.label].filter(Boolean).join('_') + '.jpg';
                     saveImage(imgModal.src, name);
                   }}>
-                  Save
+                  {t.save}
                 </button>
                 <button className="anpr-modal-close" onClick={() => setImgModal(null)}>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

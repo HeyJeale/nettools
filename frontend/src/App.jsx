@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import SSHWorkspace from './components/SSHWorkspace.jsx';
 import PcapAnalyzer from './components/PcapAnalyzer.jsx';
 import ApiTester from './components/ApiTester.jsx';
@@ -6,81 +6,66 @@ import HttpServer from './components/HttpServer.jsx';
 import AnprServer from './components/AnprServer.jsx';
 import AnprTcpClient from './components/AnprTcpClient.jsx';
 import Settings from './components/Settings.jsx';
+import { LANGS, LangContext, useT } from './i18n.js';
 
-const NAV = [
-  {
-    id: 'ssh',
-    label: 'SSH & Files',
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="1" y="3" width="14" height="10" rx="2"/>
-        <path d="M4 7l2 2-2 2M8 11h4"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'pcap',
-    label: 'PCAP Analyzer',
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M1 8h2l2-5 2 10 2-7 2 4 1-2h3"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'api',
-    label: 'API Tester',
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M2 4h12M2 8h8M2 12h5"/><circle cx="13" cy="11" r="2.5"/><path d="M14.8 12.8l1.2 1.2"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'httpserver',
-    label: 'HTTP Server',
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="1" y="2" width="14" height="5" rx="1.5"/>
-        <rect x="1" y="9" width="14" height="5" rx="1.5"/>
-        <circle cx="4" cy="4.5" r="0.8" fill="currentColor" stroke="none"/>
-        <circle cx="4" cy="11.5" r="0.8" fill="currentColor" stroke="none"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'anpr',
-    label: 'ANPR Server',
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="1" y="4" width="14" height="8" rx="1.5"/>
-        <path d="M4 7h8M4 9.5h5"/>
-        <circle cx="11.5" cy="9.5" r="1" fill="currentColor" stroke="none"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'tcplpr',
-    label: 'ANPR TCP Client',
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="1" y="4" width="14" height="8" rx="1.5"/>
-        <path d="M4 7h5M4 9.5h3"/>
-        <path d="M11 6l3 2-3 2"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'settings',
-    label: 'Settings',
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="8" cy="8" r="2.2"/>
-        <path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M3.6 12.4l1.1-1.1M11.3 4.7l1.1-1.1"/>
-      </svg>
-    ),
-  },
-];
+const NAV_IDS = ['ssh', 'pcap', 'api', 'httpserver', 'anpr', 'tcplpr', 'settings'];
+
+const NAV_ICONS = {
+  ssh: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="3" width="14" height="10" rx="2"/>
+      <path d="M4 7l2 2-2 2M8 11h4"/>
+    </svg>
+  ),
+  pcap: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 8h2l2-5 2 10 2-7 2 4 1-2h3"/>
+    </svg>
+  ),
+  api: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 4h12M2 8h8M2 12h5"/><circle cx="13" cy="11" r="2.5"/><path d="M14.8 12.8l1.2 1.2"/>
+    </svg>
+  ),
+  httpserver: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="2" width="14" height="5" rx="1.5"/>
+      <rect x="1" y="9" width="14" height="5" rx="1.5"/>
+      <circle cx="4" cy="4.5" r="0.8" fill="currentColor" stroke="none"/>
+      <circle cx="4" cy="11.5" r="0.8" fill="currentColor" stroke="none"/>
+    </svg>
+  ),
+  anpr: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="4" width="14" height="8" rx="1.5"/>
+      <path d="M4 7h8M4 9.5h5"/>
+      <circle cx="11.5" cy="9.5" r="1" fill="currentColor" stroke="none"/>
+    </svg>
+  ),
+  tcplpr: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="4" width="14" height="8" rx="1.5"/>
+      <path d="M4 7h5M4 9.5h3"/>
+      <path d="M11 6l3 2-3 2"/>
+    </svg>
+  ),
+  settings: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="8" r="2.2"/>
+      <path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M3.6 12.4l1.1-1.1M11.3 4.7l1.1-1.1"/>
+    </svg>
+  ),
+};
+
+const NAV_LABEL_KEYS = {
+  ssh:        'navSsh',
+  pcap:       'navPcap',
+  api:        'navApi',
+  httpserver: 'navHttp',
+  anpr:       'navAnpr',
+  tcplpr:     'navTcpLpr',
+  settings:   'navSettings',
+};
 
 function SunIcon() {
   return (
@@ -107,18 +92,17 @@ function glassMove(e) {
   e.currentTarget.style.setProperty('--sy', `${e.clientY - r.top}px`);
 }
 
-export default function App() {
+// Inner component so useT() can read LangContext provided by App
+function AppInner({ lang, setLang, theme, setTheme }) {
+  const t = useT();
   const [view, setView] = useState('ssh');
   const [sessionId, setSessionId] = useState(null);
   const [connected, setConnected] = useState(false);
   const [connInfo, setConnInfo] = useState(null);
-  const [theme, setTheme] = useState(() => localStorage.getItem('nt-theme') || 'dark');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  // Track loaded pcap file so we can prompt before navigating away from large files
   const [pcapFileInfo, setPcapFileInfo] = useState({ pcapId: null, fileSize: 0 });
   const [pcapKey, setPcapKey] = useState(0);
 
-  /* Global mouse → CSS vars for spotlight */
   useEffect(() => {
     function move(e) {
       document.documentElement.style.setProperty('--mx', `${e.clientX}px`);
@@ -128,40 +112,14 @@ export default function App() {
     return () => window.removeEventListener('mousemove', move);
   }, []);
 
-  /* Theme */
-  useEffect(() => {
-    const root = document.documentElement;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    function apply() {
-      const isDark = theme === 'dark' || (theme === 'auto' && mq.matches);
-      root.setAttribute('data-theme', isDark ? 'dark' : 'light');
-    }
-    apply();
-    localStorage.setItem('nt-theme', theme);
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
-  }, [theme]);
-
-  /* Auto-clean cache on tab close / refresh */
-  useEffect(() => {
-    function onUnload() {
-      if (localStorage.getItem('nt-auto-clean') !== 'false') {
-        navigator.sendBeacon('/api/cache/clear');
-      }
-    }
-    window.addEventListener('beforeunload', onUnload);
-    return () => window.removeEventListener('beforeunload', onUnload);
-  }, []);
-
   function cycleTheme() {
-    setTheme(t => t === 'auto' ? 'dark' : t === 'dark' ? 'light' : 'auto');
+    setTheme(th => th === 'auto' ? 'dark' : th === 'dark' ? 'light' : 'auto');
   }
 
-  // Navigate to a new view; prompt if leaving a large pcap file (>50 MB)
   function navigate(newView) {
     if (view === 'pcap' && newView !== 'pcap' && pcapFileInfo.pcapId && pcapFileInfo.fileSize > 50 * 1024 * 1024) {
       const mb = (pcapFileInfo.fileSize / 1024 / 1024).toFixed(1);
-      const ok = window.confirm(`The loaded PCAP file is ${mb} MB. Close it to free memory?`);
+      const ok = window.confirm(t.pcapCloseConfirm(mb));
       if (ok) {
         setPcapKey(k => k + 1);
         setPcapFileInfo({ pcapId: null, fileSize: 0 });
@@ -170,17 +128,16 @@ export default function App() {
     setView(newView);
   }
 
+  const themeIcon = theme === 'light' ? <SunIcon /> : theme === 'dark' ? <MoonIcon /> : <span className="theme-auto">A</span>;
+  const themeText = theme === 'auto' ? t.themeAuto : theme === 'dark' ? t.themeDark : t.themeLight;
+
   return (
     <div className="app">
-      {/* Global mouse spotlight */}
       <div className="mouse-spotlight" aria-hidden="true" />
-
-      {/* Ambient background orbs */}
       <div className="bg-orb bg-orb-1" aria-hidden="true" />
       <div className="bg-orb bg-orb-2" aria-hidden="true" />
       <div className="bg-orb bg-orb-3" aria-hidden="true" />
 
-      {/* Floating sidebar */}
       <aside className={`sidebar${sidebarCollapsed ? ' sidebar-collapsed' : ''}`} onMouseMove={glassMove}>
         <div className="sidebar-specular" aria-hidden="true" />
         <div className="sidebar-inner">
@@ -197,30 +154,30 @@ export default function App() {
           </div>
 
           <nav className="sidebar-nav">
-            {NAV.map((item) => (
+            {NAV_IDS.map((id) => (
               <button
-                key={item.id}
-                className={`nav-item${view === item.id ? ' active' : ''}`}
-                onClick={() => navigate(item.id)}
-                title={sidebarCollapsed ? item.label : ''}
+                key={id}
+                className={`nav-item${view === id ? ' active' : ''}`}
+                onClick={() => navigate(id)}
+                title={sidebarCollapsed ? t[NAV_LABEL_KEYS[id]] : ''}
               >
-                <span className="nav-icon">{item.icon}</span>
-                {!sidebarCollapsed && <span className="nav-label">{item.label}</span>}
+                <span className="nav-icon">{NAV_ICONS[id]}</span>
+                {!sidebarCollapsed && <span className="nav-label">{t[NAV_LABEL_KEYS[id]]}</span>}
               </button>
             ))}
           </nav>
 
           <div className="sidebar-footer">
-            <button className="theme-btn" onClick={cycleTheme} title={`Theme: ${theme}`}>
-              {theme === 'light' ? <SunIcon /> : theme === 'dark' ? <MoonIcon /> : <span className="theme-auto">A</span>}
-              {!sidebarCollapsed && <span>{theme === 'auto' ? 'Auto' : theme === 'dark' ? 'Dark' : 'Light'}</span>}
+            <button className="theme-btn" onClick={cycleTheme} title={t.themeLabel + themeText}>
+              {themeIcon}
+              {!sidebarCollapsed && <span>{themeText}</span>}
             </button>
 
             {!sidebarCollapsed && (
               <div className={`conn-status ${connected ? 'connected' : 'disconnected'}`}>
                 <span className="status-dot" />
                 <span className="conn-text">
-                  {connected && connInfo ? `${connInfo.username}@${connInfo.host}` : 'Not connected'}
+                  {connected && connInfo ? `${connInfo.username}@${connInfo.host}` : t.notConnected}
                 </span>
               </div>
             )}
@@ -232,17 +189,14 @@ export default function App() {
           </div>
         </div>
 
-        {/* Collapse toggle — outside inner wrapper, shows on sidebar hover */}
-        <button className="sidebar-collapse-btn" onClick={() => setSidebarCollapsed(v => !v)} title={sidebarCollapsed ? 'Expand' : 'Collapse'}>
+        <button className="sidebar-collapse-btn" onClick={() => setSidebarCollapsed(v => !v)}
+          title={sidebarCollapsed ? t.expand : t.collapse}>
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            {sidebarCollapsed
-              ? <path d="M4 2l4 4-4 4"/>
-              : <path d="M8 2L4 6l4 4"/>}
+            {sidebarCollapsed ? <path d="M4 2l4 4-4 4"/> : <path d="M8 2L4 6l4 4"/>}
           </svg>
         </button>
       </aside>
 
-      {/* Main content */}
       <main className={`main-content${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
         <div style={{ display: view === 'ssh' ? 'flex' : 'none', flex: 1, overflow: 'hidden', flexDirection: 'column' }}>
           <SSHWorkspace
@@ -262,8 +216,46 @@ export default function App() {
         <div style={{ display: view === 'tcplpr' ? 'flex' : 'none', flex: 1, overflow: 'hidden', flexDirection: 'column' }}>
           <AnprTcpClient />
         </div>
-        {view === 'settings' && <Settings theme={theme} setTheme={setTheme} />}
+        {view === 'settings' && <Settings theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} />}
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  const [theme, setTheme] = useState(() => localStorage.getItem('nt-theme') || 'dark');
+  const [lang,  setLang]  = useState(() => localStorage.getItem('nt-lang')  || 'en');
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    function apply() {
+      const isDark = theme === 'dark' || (theme === 'auto' && mq.matches);
+      root.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    }
+    apply();
+    localStorage.setItem('nt-theme', theme);
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('nt-lang', lang);
+  }, [lang]);
+
+  useEffect(() => {
+    function onUnload() {
+      if (localStorage.getItem('nt-auto-clean') !== 'false') {
+        navigator.sendBeacon('/api/cache/clear');
+      }
+    }
+    window.addEventListener('beforeunload', onUnload);
+    return () => window.removeEventListener('beforeunload', onUnload);
+  }, []);
+
+  return (
+    <LangContext.Provider value={lang}>
+      <AppInner lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} />
+    </LangContext.Provider>
   );
 }

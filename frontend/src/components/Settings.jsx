@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { LANGS, useT } from '../i18n.js';
 
 function fmtBytes(b) {
   if (!b) return '0 B';
@@ -11,7 +12,7 @@ function fmtBytes(b) {
 const THEME_OPTIONS = [
   {
     id: 'dark',
-    label: 'Dark',
+    labelKey: 'themeDark',
     preview: (
       <div style={{ width: '100%', height: '100%', background: '#0d1117', display: 'flex', gap: 5, padding: 7 }}>
         <div style={{ width: 22, background: '#161b22', borderRadius: 3, flexShrink: 0 }} />
@@ -25,7 +26,7 @@ const THEME_OPTIONS = [
   },
   {
     id: 'light',
-    label: 'Light',
+    labelKey: 'themeLight',
     preview: (
       <div style={{ width: '100%', height: '100%', background: '#f6f8fa', display: 'flex', gap: 5, padding: 7 }}>
         <div style={{ width: 22, background: '#eaeef2', borderRadius: 3, flexShrink: 0 }} />
@@ -39,7 +40,7 @@ const THEME_OPTIONS = [
   },
   {
     id: 'auto',
-    label: 'Auto',
+    labelKey: 'themeAuto',
     preview: (
       <div style={{ width: '100%', height: '100%', display: 'flex' }}>
         <div style={{ width: '50%', background: '#0d1117', display: 'flex', gap: 3, padding: '7px 3px 7px 7px', overflow: 'hidden' }}>
@@ -63,11 +64,12 @@ const THEME_OPTIONS = [
   },
 ];
 
-export default function Settings({ theme, setTheme }) {
-  const [cacheInfo, setCacheInfo]   = useState(null);
-  const [clearing,  setClearing]   = useState(false);
+export default function Settings({ theme, setTheme, lang, setLang }) {
+  const t = useT();
+  const [cacheInfo,   setCacheInfo]   = useState(null);
+  const [clearing,    setClearing]    = useState(false);
   const [clearResult, setClearResult] = useState(null);
-  const [autoClean, setAutoClean]  = useState(
+  const [autoClean,   setAutoClean]   = useState(
     () => localStorage.getItem('nt-auto-clean') !== 'false',
   );
 
@@ -97,9 +99,32 @@ export default function Settings({ theme, setTheme }) {
   return (
     <div className="settings-root">
 
+      {/* ── Language ───────────────────────────────────────────────────────────── */}
+      <div className="settings-card">
+        <div className="settings-card-title">{t.settingsLang}</div>
+        <div className="lang-selector">
+          {Object.entries(LANGS).map(([id, { label }]) => (
+            <button
+              key={id}
+              className={`lang-btn${lang === id ? ' selected' : ''}`}
+              onClick={() => setLang(id)}
+            >
+              {label}
+              {lang === id && (
+                <span className="lang-btn-check">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1.5 5l2.5 2.5 4.5-4.5"/>
+                  </svg>
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* ── Color mode ─────────────────────────────────────────────────────────── */}
       <div className="settings-card">
-        <div className="settings-card-title">Color Mode</div>
+        <div className="settings-card-title">{t.settingsColorMode}</div>
         <div className="theme-cards">
           {THEME_OPTIONS.map(opt => (
             <button
@@ -108,7 +133,7 @@ export default function Settings({ theme, setTheme }) {
               onClick={() => setTheme(opt.id)}
             >
               <div className="theme-preview">{opt.preview}</div>
-              <span className="theme-card-label">{opt.label}</span>
+              <span className="theme-card-label">{t[opt.labelKey]}</span>
               {theme === opt.id && (
                 <span className="theme-card-check">
                   <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -123,16 +148,13 @@ export default function Settings({ theme, setTheme }) {
 
       {/* ── Cache management ───────────────────────────────────────────────────── */}
       <div className="settings-card">
-        <div className="settings-card-title">Cache</div>
-        <p className="settings-card-desc">
-          Clears uploaded PCAP files and ANPR / LPR images stored on the server.
-          The corresponding record lists will be emptied at the same time.
-        </p>
+        <div className="settings-card-title">{t.settingsCache}</div>
+        <p className="settings-card-desc">{t.settingsCacheDesc}</p>
         <div className="settings-cache-row">
           <span className="settings-cache-size">
             {cacheInfo == null
-              ? 'Loading…'
-              : `${fmtBytes(cacheInfo.bytes)} · ${cacheInfo.count} file${cacheInfo.count !== 1 ? 's' : ''}`
+              ? t.settingsCacheLoading
+              : `${fmtBytes(cacheInfo.bytes)} · ${cacheInfo.count} ${cacheInfo.count !== 1 ? 'files' : 'file'}`
             }
           </span>
           <button
@@ -141,14 +163,14 @@ export default function Settings({ theme, setTheme }) {
             onClick={handleClear}
             disabled={clearing || (cacheInfo != null && cacheInfo.count === 0)}
           >
-            {clearing ? 'Clearing…' : 'Clear cache'}
+            {clearing ? t.settingsClearing : t.settingsClearCache}
           </button>
         </div>
         {clearResult && (
           <div className={`settings-clear-result ${clearResult.ok ? 'ok' : 'err'}`}>
             {clearResult.ok
-              ? `Cleared ${clearResult.count} file${clearResult.count !== 1 ? 's' : ''}, freed ${fmtBytes(clearResult.freed)}.`
-              : `Failed: ${clearResult.error}`
+              ? t.settingsClearedResult(clearResult.count, fmtBytes(clearResult.freed))
+              : t.settingsFailed(clearResult.error)
             }
           </div>
         )}
@@ -156,13 +178,11 @@ export default function Settings({ theme, setTheme }) {
 
       {/* ── Auto-clean on exit ─────────────────────────────────────────────────── */}
       <div className="settings-card">
-        <div className="settings-card-title">Auto-clean on Exit</div>
+        <div className="settings-card-title">{t.settingsAutoClean}</div>
         <div className="settings-toggle-row">
           <div className="settings-toggle-text">
-            <div className="settings-toggle-label">Clear all cache when the app is closed</div>
-            <div className="settings-toggle-sublabel">
-              PCAP files and images are deleted automatically on tab close or refresh.
-            </div>
+            <div className="settings-toggle-label">{t.settingsAutoCleanLabel}</div>
+            <div className="settings-toggle-sublabel">{t.settingsAutoCleanSub}</div>
           </div>
           <button
             role="switch"

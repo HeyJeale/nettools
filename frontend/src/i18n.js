@@ -186,6 +186,7 @@ const en = {
 
     // ── PCAP Analyzer ─────────────────────────────────────────────────────────
     pcapOpen:           'Open PCAP',
+    pcapClose:          'Close PCAP',
     pcapFilterPlaceholder: 'Filter: tcp, ip.src==1.2.3.4, contains "GET", http && port==80',
     pcapPackets:        (f, t) => `${f} / ${t} packets`,
     pcapPerPage:        (n) => `${n} / page`,
@@ -464,6 +465,7 @@ const zh = {
 
     // ── PCAP Analyzer ─────────────────────────────────────────────────────────
     pcapOpen:           '打开 PCAP',
+    pcapClose:          '关闭 PCAP',
     pcapFilterPlaceholder: '过滤器：tcp, ip.src==1.2.3.4, contains "GET", http && port==80',
     pcapPackets:        (f, t) => `${f} / ${t} 个数据包`,
     pcapPerPage:        (n) => `${n} 条/页`,

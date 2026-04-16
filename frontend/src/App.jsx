@@ -100,8 +100,6 @@ function AppInner({ lang, setLang, theme, setTheme }) {
   const [connected, setConnected] = useState(false);
   const [connInfo, setConnInfo] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [pcapFileInfo, setPcapFileInfo] = useState({ pcapId: null, fileSize: 0 });
-  const [pcapKey, setPcapKey] = useState(0);
 
   useEffect(() => {
     function move(e) {
@@ -158,7 +156,7 @@ function AppInner({ lang, setLang, theme, setTheme }) {
               <button
                 key={id}
                 className={`nav-item${view === id ? ' active' : ''}`}
-                onClick={() => navigate(id)}
+                onClick={() => setView(id)}
                 title={sidebarCollapsed ? t[NAV_LABEL_KEYS[id]] : ''}
               >
                 <span className="nav-icon">{NAV_ICONS[id]}</span>
@@ -205,7 +203,9 @@ function AppInner({ lang, setLang, theme, setTheme }) {
             connInfo={connInfo} setConnInfo={setConnInfo}
           />
         </div>
-        {view === 'pcap' && <PcapAnalyzer key={pcapKey} onFileLoaded={(id, size) => setPcapFileInfo({ pcapId: id, fileSize: size })} />}
+        <div style={{ display: view === 'pcap' ? 'flex' : 'none', flex: 1, overflow: 'hidden', flexDirection: 'column' }}>
+          <PcapAnalyzer />
+        </div>
         {view === 'api' && <ApiTester />}
         <div style={{ display: view === 'httpserver' ? 'flex' : 'none', flex: 1, overflow: 'hidden', flexDirection: 'column' }}>
           <HttpServer />

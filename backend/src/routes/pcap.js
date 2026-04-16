@@ -8,6 +8,10 @@ const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', '..', '
 // pcapId -> { filePath, packets }
 const pcapStore = new Map();
 
+function clearStore() {
+  pcapStore.clear();
+}
+
 module.exports = async function pcapRoutes(fastify) {
   // Upload & parse pcap file
   fastify.post('/upload', async (req, reply) => {
@@ -155,3 +159,5 @@ module.exports = async function pcapRoutes(fastify) {
     return { ok: true };
   });
 };
+
+module.exports.clearStore = clearStore;

@@ -44,7 +44,9 @@ function clearDir(dir) {
   return { freed, count };
 }
 
-module.exports = async function cacheRoutes(fastify) {
+module.exports = async function cacheRoutes(fastify, opts) {
+  const clearPcapStore = opts.clearPcapStore || (() => {});
+
   // Accept text/plain from navigator.sendBeacon
   fastify.addContentTypeParser(
     'text/plain', { parseAs: 'string' },
@@ -54,6 +56,7 @@ module.exports = async function cacheRoutes(fastify) {
   fastify.get('/info', async () => walkDir(uploadsDir));
 
   fastify.post('/clear', async () => {
+    clearPcapStore();
     const r = clearDir(uploadsDir);
     return { ok: true, freed: r.freed, count: r.count };
   });

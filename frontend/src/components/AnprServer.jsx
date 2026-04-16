@@ -178,6 +178,17 @@ export default function AnprServer() {
     return () => window.removeEventListener('beforeunload', onUnload);
   }, []);
 
+  useEffect(() => {
+    function onCacheCleared() {
+      setAllRecords([]);
+      setCurrentPage(1);
+      setOnLivePage(true);
+      seqRef.current = 0;
+    }
+    window.addEventListener('nt-cache-cleared', onCacheCleared);
+    return () => window.removeEventListener('nt-cache-cleared', onCacheCleared);
+  }, []);
+
   function setFilter(key, val) { setFilters(f => ({ ...f, [key]: val })); }
 
   function goToPage(page) {

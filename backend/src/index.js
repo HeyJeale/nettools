@@ -24,7 +24,10 @@ async function start() {
   await fastify.register(require('./routes/httpserver'), { prefix: '/api/httpserver' });
   await fastify.register(require('./routes/anpr'), { prefix: '/api/anpr' });
   await fastify.register(require('./routes/tcpLprClient'), { prefix: '/api/tcplpr' });
-  await fastify.register(require('./routes/cache'), { prefix: '/api/cache' });
+  await fastify.register(require('./routes/cache'), {
+    prefix: '/api/cache',
+    clearPcapStore: require('./routes/pcap').clearStore,
+  });
 
   // Health check — used by Electron to know when the backend is ready
   fastify.get('/api/health', async () => ({ ok: true }));

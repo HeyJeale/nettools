@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-latest
+          - os: macos-13
             arch: x64
             build_flag: --mac --x64
             artifact_name: mac-x64

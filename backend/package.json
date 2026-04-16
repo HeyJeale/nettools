@@ -1,6 +1,6 @@
 {
   "name": "nettools-backend",
-  "version": "1.0.0",
+  "version": "1.0.1-en",
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js"

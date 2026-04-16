@@ -1,6 +1,6 @@
 {
   "name": "nettools",
-  "version": "1.0.0",
+  "version": "1.0.1-en",
   "author": "Lucas Lu w/ Claude Code",
   "main": "electron/main.js",
   "scripts": {

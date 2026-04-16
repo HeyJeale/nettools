@@ -1,41 +1,42 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { useT } from '../i18n.js';
 
 const PAGE_SIZE = 50;
 
-const BODY_FIELDS = [
-  { key: 'plate',        label: 'Plate' },
-  { key: 'vehicleType',  label: 'Vehicle Type' },
-  { key: 'vehicleColor', label: 'Vehicle Color' },
-  { key: 'plateColor',   label: 'Plate Color' },
-  { key: 'brand',        label: 'Brand' },
-  { key: 'confidence',   label: 'Confidence' },
-  { key: 'speed',        label: 'Speed' },
-  { key: 'direction',    label: 'Direction' },
-  { key: 'region',       label: 'Region' },
-  { key: 'roiNumber',    label: 'ROI' },
-  { key: 'plateType',    label: 'Plate Type' },
-  { key: 'distance',     label: 'Distance' },
-  { key: 'azimuth',      label: 'Azimuth' },
-  { key: 'vehicleCount', label: 'Vehicle Count' },
-  { key: 'width',        label: 'Width' },
-  { key: 'height',       label: 'Height' },
-  { key: 'x1',           label: 'X1' },
-  { key: 'y1',           label: 'Y1' },
-  { key: 'x2',           label: 'X2' },
-  { key: 'y2',           label: 'Y2' },
-  { key: 'guid',         label: 'GUID' },
-  { key: 'time',         label: 'Time' },
+const BODY_FIELD_KEYS = [
+  { key: 'plate',        tKey: 'plate' },
+  { key: 'vehicleType',  tKey: 'vehicleType' },
+  { key: 'vehicleColor', tKey: 'vehicleColor' },
+  { key: 'plateColor',   tKey: 'plateColor' },
+  { key: 'brand',        tKey: 'brand' },
+  { key: 'confidence',   tKey: 'confidence' },
+  { key: 'speed',        tKey: 'speed' },
+  { key: 'direction',    tKey: 'direction' },
+  { key: 'region',       tKey: 'region' },
+  { key: 'roiNumber',    tKey: 'roi' },
+  { key: 'plateType',    tKey: 'plateType' },
+  { key: 'distance',     tKey: 'distance' },
+  { key: 'azimuth',      tKey: 'azimuth' },
+  { key: 'vehicleCount', tKey: 'vehicleCount' },
+  { key: 'width',        tKey: 'width' },
+  { key: 'height',       tKey: 'height' },
+  { key: 'x1',           tKey: null, label: 'X1' },
+  { key: 'y1',           tKey: null, label: 'Y1' },
+  { key: 'x2',           tKey: null, label: 'X2' },
+  { key: 'y2',           tKey: null, label: 'Y2' },
+  { key: 'guid',         tKey: 'guid' },
+  { key: 'time',         tKey: 'time' },
 ];
 
-const FILTER_FIELDS = [
-  { key: 'plate',        label: 'Plate' },
-  { key: 'vehicleType',  label: 'Vehicle Type' },
-  { key: 'vehicleColor', label: 'Vehicle Color' },
-  { key: 'plateColor',   label: 'Plate Color' },
-  { key: 'brand',        label: 'Brand' },
-  { key: 'region',       label: 'Region' },
-  { key: 'direction',    label: 'Direction' },
+const FILTER_FIELD_KEYS = [
+  { key: 'plate',        tKey: 'plate' },
+  { key: 'vehicleType',  tKey: 'vehicleType' },
+  { key: 'vehicleColor', tKey: 'vehicleColor' },
+  { key: 'plateColor',   tKey: 'plateColor' },
+  { key: 'brand',        tKey: 'brand' },
+  { key: 'region',       tKey: 'region' },
+  { key: 'direction',    tKey: 'direction' },
 ];
 
 const EMPTY_FILTERS = {
@@ -50,7 +51,7 @@ function hasActiveFilter(f) {
 
 function applyFilters(records, filters) {
   return records.filter(r => {
-    for (const { key } of FILTER_FIELDS) {
+    for (const { key } of FILTER_FIELD_KEYS) {
       const fval = filters[key]?.trim();
       if (!fval) continue;
       if (!(r[key] ?? '').toString().toLowerCase().includes(fval.toLowerCase())) return false;
@@ -65,6 +66,7 @@ function applyFilters(records, filters) {
 
 // ── Single record card ────────────────────────────────────────────────────────
 function TcpLprCard({ record, connId, onImgClick }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   return (
@@ -91,20 +93,21 @@ function TcpLprCard({ record, connId, onImgClick }) {
               <div className="anpr-card-imgs">
                 {Array.from({ length: record.imageCount }, (_, i) => {
                   const src = `/api/tcplpr/image/${connId}/${record.id}/${i}`;
+                  const label = t.imageN(i + 1);
                   return (
                     <div key={i} className="anpr-img-wrap">
-                      <span className="anpr-cell-label">Image {i + 1}</span>
-                      <img className="anpr-card-img" src={src} alt={`Image ${i + 1}`} title="Click to view / save"
-                        onClick={() => onImgClick({ src, label: `Image ${i + 1}`, record })} />
+                      <span className="anpr-cell-label">{label}</span>
+                      <img className="anpr-card-img" src={src} alt={label} title={t.clickToView}
+                        onClick={() => onImgClick({ src, label, record })} />
                     </div>
                   );
                 })}
               </div>
             )}
             <div className="anpr-card-grid">
-              {BODY_FIELDS.filter(f => record[f.key] != null && record[f.key] !== '').map(f => (
+              {BODY_FIELD_KEYS.filter(f => record[f.key] != null && record[f.key] !== '').map(f => (
                 <div key={f.key} className={`anpr-cell${f.key === 'guid' ? ' anpr-cell-wide' : ''}`}>
-                  <span className="anpr-cell-label">{f.label}</span>
+                  <span className="anpr-cell-label">{f.tKey ? t[f.tKey] : f.label}</span>
                   <span className="anpr-cell-value">{record[f.key]}</span>
                 </div>
               ))}
@@ -118,6 +121,7 @@ function TcpLprCard({ record, connId, onImgClick }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function AnprTcpClient() {
+  const t = useT();
   const [host,     setHost]     = useState('');
   const [port,     setPort]     = useState('');
   const [username, setUsername] = useState('');
@@ -126,7 +130,6 @@ export default function AnprTcpClient() {
   const [connState,   setConnState]   = useState('idle');
   const [connId,      setConnId]      = useState(null);
   const [error,       setError]       = useState('');
-  // allRecords: accumulates all records in this session, each with stable _seq
   const [allRecords,  setAllRecords]  = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [onLivePage,  setOnLivePage]  = useState(true);
@@ -264,26 +267,26 @@ export default function AnprTcpClient() {
       <div className="hs-config-bar">
         <div className="hs-config-fields">
           <div className="hs-field" style={{ flex: 3 }}>
-            <label className="hs-label">Camera IP / Host</label>
+            <label className="hs-label">{t.tcpCameraHost}</label>
             <input className="hs-input" value={host}
               onChange={e => setHost(e.target.value)}
               disabled={isConnected} placeholder="192.168.1.100" />
           </div>
           <div className="hs-field hs-field-port">
-            <label className="hs-label">Port</label>
+            <label className="hs-label">{t.port}</label>
             <input className="hs-input" value={port}
               onChange={e => setPort(e.target.value.replace(/\D/g, ''))}
               disabled={isConnected} placeholder="5000" />
           </div>
           <div className="hs-field-sep" />
           <div className="hs-field">
-            <label className="hs-label">Username</label>
+            <label className="hs-label">{t.username}</label>
             <input className="hs-input" value={username}
               onChange={e => setUsername(e.target.value)}
               disabled={isAuthed} placeholder="admin" autoComplete="off" />
           </div>
           <div className="hs-field">
-            <label className="hs-label">Password</label>
+            <label className="hs-label">{t.password}</label>
             <input className="hs-input" type="password" value={password}
               onChange={e => setPassword(e.target.value)}
               disabled={isAuthed} placeholder="••••••••" autoComplete="off" />
@@ -296,7 +299,7 @@ export default function AnprTcpClient() {
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <path d="M2 8h12M9 3l5 5-5 5"/>
               </svg>
-              Connect
+              {t.connect}
             </button>
           )}
           {connState === 'connected' && (
@@ -305,7 +308,7 @@ export default function AnprTcpClient() {
                 <rect x="3" y="7" width="10" height="7" rx="1.5"/>
                 <path d="M5 7V5a3 3 0 016 0v2"/>
               </svg>
-              Auth
+              {t.tcpAuth}
             </button>
           )}
           {isConnected && (
@@ -313,7 +316,7 @@ export default function AnprTcpClient() {
               <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor">
                 <rect x="2" y="2" width="12" height="12" rx="2"/>
               </svg>
-              Disconnect
+              {t.disconnect}
             </button>
           )}
         </div>
@@ -325,9 +328,9 @@ export default function AnprTcpClient() {
       <div className="hs-status-bar">
         {isConnected && <span className="hs-status-dot" style={isAuthed ? {} : { background: 'var(--yellow)' }} />}
         <span className="hs-status-text">
-          {isIdle && 'Disconnected'}
-          {connState === 'connected' && `Connected to ${host}:${port} — awaiting authentication`}
-          {isAuthed && `Authenticated  ${host}:${port}`}
+          {isIdle && t.tcpDisconnected}
+          {connState === 'connected' && t.tcpConnectedAuth(host, port)}
+          {isAuthed && t.tcpAuthenticated(host, port)}
         </span>
         <div style={{ flex: 1 }} />
         {isConnected && (
@@ -335,18 +338,17 @@ export default function AnprTcpClient() {
             <span className="hs-req-count">
               {isFiltered
                 ? `${filtered.length} / ${pageRecords.length}`
-                : allRecords.length
+                : t.records(allRecords.length)
               }
-              {' '}record{allRecords.length !== 1 ? 's' : ''}
             </span>
             <label className="api-opt-check">
               <input type="checkbox" checked={autoScroll} onChange={e => setAutoScroll(e.target.checked)} />
-              <span className="api-opt-check-label">Auto-scroll</span>
+              <span className="api-opt-check-label">{t.autoScroll}</span>
             </label>
           </>
         )}
         {allRecords.length > 0 && (
-          <button className="btn-xs danger" onClick={handleClear}>Clear</button>
+          <button className="btn-xs danger" onClick={handleClear}>{t.clear}</button>
         )}
       </div>
 
@@ -359,11 +361,11 @@ export default function AnprTcpClient() {
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M2 4h12M5 8h6M8 12h0"/>
           </svg>
-          Filter
+          {t.filter}
           {isFiltered && <span className="anpr-filter-dot" />}
         </button>
         {isFiltered && (
-          <button className="btn-xs" onClick={() => setFilters(EMPTY_FILTERS)}>Clear filters</button>
+          <button className="btn-xs" onClick={() => setFilters(EMPTY_FILTERS)}>{t.clearFilters}</button>
         )}
       </div>
 
@@ -372,20 +374,20 @@ export default function AnprTcpClient() {
         <div className="anpr-filter-panel">
           <div className="anpr-filter-panel-inner">
             <div className="anpr-filter-grid">
-              {FILTER_FIELDS.map(f => (
+              {FILTER_FIELD_KEYS.map(f => (
                 <div key={f.key} className="anpr-filter-cell">
-                  <label className="anpr-cell-label">{f.label}</label>
+                  <label className="anpr-cell-label">{t[f.tKey]}</label>
                   <input className="anpr-filter-input" value={filters[f.key]}
-                    onChange={e => setFilter(f.key, e.target.value)} placeholder="contains…" />
+                    onChange={e => setFilter(f.key, e.target.value)} placeholder={t.contains} />
                 </div>
               ))}
               <div className="anpr-filter-cell">
-                <label className="anpr-cell-label">Time — Start</label>
+                <label className="anpr-cell-label">{t.timeStart}</label>
                 <input className="anpr-filter-input" value={filters.timeStart}
                   onChange={e => setFilter('timeStart', e.target.value)} placeholder="2024/1/1 00:00:00" />
               </div>
               <div className="anpr-filter-cell">
-                <label className="anpr-cell-label">Time — End</label>
+                <label className="anpr-cell-label">{t.timeEnd}</label>
                 <input className="anpr-filter-input" value={filters.timeEnd}
                   onChange={e => setFilter('timeEnd', e.target.value)} placeholder="2024/12/31 23:59:59" />
               </div>
@@ -401,19 +403,19 @@ export default function AnprTcpClient() {
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.25">
               <path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3"/>
             </svg>
-            <p>Connect to a camera to receive LPR records</p>
+            <p>{t.tcpEmpty}</p>
           </div>
         )}
         {allRecords.length === 0 && connState === 'connected' && (
           <div className="hs-empty">
             <span className="hs-pulse-ring" style={{ borderColor: 'var(--yellow)' }} />
-            <p>Connected — authenticate to start receiving records</p>
+            <p>{t.tcpWaitAuth}</p>
           </div>
         )}
         {allRecords.length === 0 && isAuthed && (
           <div className="hs-empty">
             <span className="hs-pulse-ring" />
-            <p>Authenticated — waiting for LPR records…</p>
+            <p>{t.tcpWaitRecords}</p>
           </div>
         )}
         {isFiltered && filtered.length === 0 && pageRecords.length > 0 && (
@@ -421,7 +423,7 @@ export default function AnprTcpClient() {
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.25">
               <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
             </svg>
-            <p>No records match the current filters</p>
+            <p>{t.noRecordsMatch}</p>
           </div>
         )}
         {filtered.map(r => (
@@ -437,7 +439,7 @@ export default function AnprTcpClient() {
             <button className="anpr-page-btn" disabled={currentPage <= 1}
               onClick={() => goToPage(currentPage - 1)}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M7.5 2L3 6l4.5 4"/></svg>
-              Prev
+              {t.prev}
             </button>
             <span className="anpr-page-info">
               {isLivePage && <span className="anpr-live-dot" />}
@@ -445,12 +447,12 @@ export default function AnprTcpClient() {
             </span>
             <button className="anpr-page-btn" disabled={isLivePage}
               onClick={() => goToPage(currentPage + 1)}>
-              Next
+              {t.next}
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4.5 2L9 6l-4.5 4"/></svg>
             </button>
             {!isLivePage && (
               <button className="anpr-page-btn anpr-page-latest" onClick={() => goToPage(totalPages)}>
-                Latest
+                {t.latest}
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M2 6h7M6 3l4 3-4 3"/></svg>
               </button>
             )}
@@ -471,7 +473,7 @@ export default function AnprTcpClient() {
                     const name = [r.guid, r.plate, imgModal.label].filter(Boolean).join('_') + '.jpg';
                     saveImage(imgModal.src, name);
                   }}>
-                  Save
+                  {t.save}
                 </button>
                 <button className="anpr-modal-close" onClick={() => setImgModal(null)}>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
 import {
@@ -6,6 +6,7 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 import { XMLParser } from 'fast-xml-parser';
+import { useT } from '../i18n.js';
 
 const PROTO_COLORS = {
   TCP: '#79c0ff', UDP: '#56d364', HTTP: '#e3b341', HTTPS: '#f0883e',
@@ -125,60 +126,41 @@ function XmlTree({ xml }) {
 }
 
 function HttpSection({ http }) {
+  const t = useT();
   const isReq = http.kind === 'request';
   const color = isReq ? '#e3b341' : '#56d364';
   const title = isReq
     ? `HTTP Request — ${http.method} ${http.url}`
     : `HTTP Response — ${http.status} ${http.statusText || ''}`;
-
   const ct = http.headers?.['content-type'] || '';
   const isJson = ct.includes('json');
   const isXml  = ct.includes('xml') || ct.includes('html');
-
   return (
     <LayerSection title={title} color={color} defaultOpen={true}>
       <div className="pd-field">
-        <span className="pd-field-key">Version</span>
+        <span className="pd-field-key">{t.version}</span>
         <span className="pd-field-val">{http.version}</span>
       </div>
       {isReq && (
         <>
-          <div className="pd-field">
-            <span className="pd-field-key">Method</span>
-            <span className="pd-field-val">{http.method}</span>
-          </div>
-          <div className="pd-field">
-            <span className="pd-field-key">URL</span>
-            <span className="pd-field-val">{http.url}</span>
-          </div>
+          <div className="pd-field"><span className="pd-field-key">Method</span><span className="pd-field-val">{http.method}</span></div>
+          <div className="pd-field"><span className="pd-field-key">URL</span><span className="pd-field-val">{http.url}</span></div>
         </>
       )}
       {!isReq && (
         <>
-          <div className="pd-field">
-            <span className="pd-field-key">Status code</span>
-            <span className="pd-field-val">{http.status}</span>
-          </div>
-          <div className="pd-field">
-            <span className="pd-field-key">Reason phrase</span>
-            <span className="pd-field-val">{http.statusText}</span>
-          </div>
+          <div className="pd-field"><span className="pd-field-key">Status code</span><span className="pd-field-val">{http.status}</span></div>
+          <div className="pd-field"><span className="pd-field-key">Reason phrase</span><span className="pd-field-val">{http.statusText}</span></div>
         </>
       )}
-      <div className="pd-sub-label">Headers</div>
+      <div className="pd-sub-label">{t.headers}</div>
       {Object.entries(http.headers || {}).map(([k, v]) => (
-        <div className="pd-field" key={k}>
-          <span className="pd-field-key">{k}</span>
-          <span className="pd-field-val">{v}</span>
-        </div>
+        <div className="pd-field" key={k}><span className="pd-field-key">{k}</span><span className="pd-field-val">{v}</span></div>
       ))}
       {http.body && (
         <>
-          <div className="pd-sub-label">Body</div>
-          {isXml
-            ? <XmlTree xml={http.body} />
-            : <pre className={`pd-body-pre ${isJson ? 'json' : ''}`}>{http.body}</pre>
-          }
+          <div className="pd-sub-label">{t.body}</div>
+          {isXml ? <XmlTree xml={http.body} /> : <pre className={`pd-body-pre ${isJson ? 'json' : ''}`}>{http.body}</pre>}
         </>
       )}
     </LayerSection>
@@ -186,6 +168,7 @@ function HttpSection({ http }) {
 }
 
 function PacketDetailModal({ pkt, onClose }) {
+  const t = useT();
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose(); }
     window.addEventListener('keydown', onKey);
@@ -215,105 +198,83 @@ function PacketDetailModal({ pkt, onClose }) {
             </svg>
           </button>
         </div>
-
         <div className="pd-modal-body">
           <div className="pd-layers">
-            {/* Frame */}
-            <LayerSection title="Frame" color="#8b949e" fields={[
-              ['Captured length', `${pkt.capLen} bytes`],
-              ['Original length', `${pkt.len} bytes`],
-              ['Timestamp', pkt.ts?.toFixed(9)],
+            <LayerSection title={t.pcapFrame} color="#8b949e" fields={[
+              [t.pcapCapturedLen, `${pkt.capLen} bytes`],
+              [t.pcapOriginalLen, `${pkt.len} bytes`],
+              [t.pcapTimestamp, pkt.ts?.toFixed(9)],
             ]} />
-
-            {/* Ethernet */}
             {pkt.ethSrc && (
-              <LayerSection title="Ethernet II" color="#58a6ff" fields={[
-                ['Destination', pkt.ethDst],
-                ['Source', pkt.ethSrc],
-                ['Type', pkt.etherType],
+              <LayerSection title={t.pcapEthernet} color="#58a6ff" fields={[
+                [t.destination, pkt.ethDst],
+                [t.source, pkt.ethSrc],
+                [t.type, pkt.etherType],
               ]} />
             )}
-
-            {/* ARP */}
             {pkt.protocol === 'ARP' && pkt.arpOp && (
-              <LayerSection title="ARP" color={protoColor('ARP')} fields={[
-                ['Operation', pkt.arpOp],
-                ['Sender MAC', pkt.arpSenderMac],
-                ['Sender IP', pkt.arpSenderIP],
-                ['Target MAC', pkt.arpTargetMac],
-                ['Target IP', pkt.arpTargetIP],
+              <LayerSection title={t.pcapArp} color={protoColor('ARP')} fields={[
+                [t.pcapOperation, pkt.arpOp],
+                [t.pcapSenderMac, pkt.arpSenderMac],
+                [t.pcapSenderIp, pkt.arpSenderIP],
+                [t.pcapTargetMac, pkt.arpTargetMac],
+                [t.pcapTargetIp, pkt.arpTargetIP],
               ]} />
             )}
-
-            {/* IPv4 */}
             {pkt.srcIP && (
-              <LayerSection title="Internet Protocol Version 4" color="#79c0ff" fields={[
-                ['Version', pkt.ipVersion],
-                ['Header length', `${pkt.ipIHL} bytes`],
+              <LayerSection title={t.pcapIpv4} color="#79c0ff" fields={[
+                [t.version, pkt.ipVersion],
+                [t.pcapHeaderLen, `${pkt.ipIHL} bytes`],
                 ['DSCP/TOS', `0x${(pkt.ipTOS || 0).toString(16).padStart(2, '0')}`],
-                ['Total length', pkt.ipTotalLen],
-                ['Identification', `0x${(pkt.ipId || 0).toString(16).padStart(4, '0')}`],
-                ['Flags', `0x${(pkt.ipFlags || 0).toString(16)} (DF=${!!(pkt.ipFlags & 2) ? 1 : 0})`],
-                ['Fragment offset', pkt.ipFragOff],
-                ['TTL', pkt.ttl],
-                ['Protocol', pkt.ipProto],
-                ['Checksum', pkt.ipChecksum],
-                ['Source', pkt.srcIP],
-                ['Destination', pkt.dstIP],
+                [t.pcapTotalLen, pkt.ipTotalLen],
+                [t.pcapIdentification, `0x${(pkt.ipId || 0).toString(16).padStart(4, '0')}`],
+                [t.flags, `0x${(pkt.ipFlags || 0).toString(16)} (DF=${!!(pkt.ipFlags & 2) ? 1 : 0})`],
+                [t.pcapFragOffset, pkt.ipFragOff],
+                [t.pcapTtl, pkt.ttl],
+                [t.protocol, pkt.ipProto],
+                [t.checksum, pkt.ipChecksum],
+                [t.source, pkt.srcIP],
+                [t.destination, pkt.dstIP],
               ]} />
             )}
-
-            {/* ICMP */}
             {pkt.protocol === 'ICMP' && (
-              <LayerSection title="Internet Control Message Protocol" color={protoColor('ICMP')} fields={[
-                ['Type', pkt.icmpType],
-                ['Code', pkt.icmpCode],
-                ['Checksum', pkt.icmpChecksum],
+              <LayerSection title={t.pcapIcmp} color={protoColor('ICMP')} fields={[
+                [t.type, pkt.icmpType],
+                [t.pcapCode, pkt.icmpCode],
+                [t.checksum, pkt.icmpChecksum],
               ]} />
             )}
-
-            {/* UDP */}
             {(pkt.protocol === 'UDP' || pkt.protocol === 'DNS') && pkt.srcPort != null && (
-              <LayerSection title="User Datagram Protocol" color={protoColor('UDP')} fields={[
-                ['Source port', pkt.srcPort],
-                ['Destination port', pkt.dstPort],
-                ['Length', pkt.udpLen],
-                ['Checksum', pkt.udpChecksum],
+              <LayerSection title={t.pcapUdp} color={protoColor('UDP')} fields={[
+                [t.pcapSrcPort, pkt.srcPort],
+                [t.pcapDstPort, pkt.dstPort],
+                [t.length, pkt.udpLen],
+                [t.checksum, pkt.udpChecksum],
               ]} />
             )}
-
-            {/* TCP */}
             {(pkt.protocol === 'TCP' || pkt.protocol === 'HTTP' || pkt.protocol === 'HTTPS') && pkt.srcPort != null && (
-              <LayerSection title="Transmission Control Protocol" color={protoColor('TCP')} fields={[
-                ['Source port', pkt.srcPort],
-                ['Destination port', pkt.dstPort],
-                ['Sequence number', pkt.tcpSeq],
-                ['Acknowledgment number', pkt.tcpAck],
-                ['Header length', `${pkt.tcpHdrLen} bytes`],
-                ['Flags', flagStr],
-                ['Window size', pkt.tcpWindow],
-                ['Checksum', pkt.tcpChecksum],
-                ['Urgent pointer', pkt.tcpUrgPtr],
+              <LayerSection title={t.pcapTcp} color={protoColor('TCP')} fields={[
+                [t.pcapSrcPort, pkt.srcPort],
+                [t.pcapDstPort, pkt.dstPort],
+                [t.pcapSeqNum, pkt.tcpSeq],
+                [t.pcapAckNum, pkt.tcpAck],
+                [t.pcapHeaderLen, `${pkt.tcpHdrLen} bytes`],
+                [t.flags, flagStr],
+                [t.pcapWindowSize, pkt.tcpWindow],
+                [t.checksum, pkt.tcpChecksum],
+                [t.pcapUrgentPtr, pkt.tcpUrgPtr],
               ]} />
             )}
-
-            {/* TCP continuation note */}
             {pkt.tcpContinuation && pkt.reassemblyHead != null && (
               <div className="pd-reassembly-note">
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
                   <path d="M8 1v14M1 8h14" stroke="#79c0ff" strokeWidth="1.8" strokeLinecap="round"/>
                 </svg>
-                TCP segment reassembled into HTTP — see Frame {pkt.reassemblyHead + 1}
+                {t.pcapReassembledInto(pkt.reassemblyHead + 1)}
               </div>
             )}
-
-            {/* Reassembled TCP segments info */}
             {pkt.reassembledSegments && pkt.reassembledSegments.length > 1 && (
-              <LayerSection
-                title={`Reassembled TCP segments (${pkt.reassembledTotalBytes} bytes)`}
-                color="#79c0ff"
-                defaultOpen={true}
-              >
+              <LayerSection title={t.pcapReassembledSegs(pkt.reassembledTotalBytes)} color="#79c0ff" defaultOpen={true}>
                 {pkt.reassembledSegments.map((seg, i) => (
                   <div className="pd-field" key={seg.pktIndex}>
                     <span className="pd-field-key">#{i + 1}</span>
@@ -325,19 +286,13 @@ function PacketDetailModal({ pkt, onClose }) {
                 ))}
               </LayerSection>
             )}
-
-            {/* HTTP */}
             {pkt.http && <HttpSection http={pkt.http} />}
-
-            {/* Raw payload (non-HTTP TCP/UDP) */}
             {!pkt.http && pkt.payload && pkt.payload.length > 0 && (
-              <LayerSection title="Payload" color="#8b949e" defaultOpen={false}>
+              <LayerSection title={t.pcapPayload} color="#8b949e" defaultOpen={false}>
                 <pre className="pd-body-pre">{pkt.payloadAscii}</pre>
               </LayerSection>
             )}
-
-            {/* Hex dump */}
-            <LayerSection title="Raw Hex Dump" color="#444c56" defaultOpen={false}>
+            <LayerSection title={t.pcapRawHex} color="#444c56" defaultOpen={false}>
               <pre className="pd-hex-dump">{hexDump(pkt.rawHex)}</pre>
             </LayerSection>
           </div>
@@ -350,6 +305,7 @@ function PacketDetailModal({ pkt, onClose }) {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function PcapAnalyzer({ onFileLoaded }) {
+  const t = useT();
   const [pcapId, setPcapId] = useState(null);
   const [total, setTotal] = useState(0);
   const [packets, setPackets] = useState([]);
@@ -470,49 +426,49 @@ export default function PcapAnalyzer({ onFileLoaded }) {
     <div className="pcap-analyzer">
       <div className="pcap-toolbar">
         <button className="btn-primary" onClick={() => fileInputRef.current.click()}>
-          Open PCAP
+          {t.pcapOpen}
         </button>
         <input ref={fileInputRef} type="file" accept=".pcap,.pcapng" style={{ display: 'none' }} onChange={handleUpload} />
         {pcapId && (
           <>
             <input
-              placeholder='Filter: tcp, ip.src==1.2.3.4, contains "GET", http && port==80'
+              placeholder={t.pcapFilterPlaceholder}
               value={filterInput}
               onChange={(e) => setFilterInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applyFilter()}
             />
-            <button className="btn-primary" onClick={applyFilter}>Apply</button>
+            <button className="btn-primary" onClick={applyFilter}>{t.apply}</button>
             {filter && (
               <button className="btn-secondary" onClick={() => {
                 setFilterInput(''); setFilter('');
                 loadPackets(pcapId, '', 1); loadStats(pcapId, ''); loadTimeline(pcapId, ''); setPage(1);
-              }}>Clear</button>
+              }}>{t.clear}</button>
             )}
-            <span className="pcap-info">{filteredTotal} / {total} packets</span>
+            <span className="pcap-info">{t.pcapPackets(filteredTotal, total)}</span>
             <select
               className="pcap-pagesize-select"
               value={pageSize}
               onChange={e => { setPageSize(Number(e.target.value)); setPage(1); loadPackets(pcapId, filter, 1); }}
             >
-              {[50, 100, 200, 500].map(n => <option key={n} value={n}>{n} / page</option>)}
+              {[50, 100, 200, 500].map(n => <option key={n} value={n}>{t.pcapPerPage(n)}</option>)}
             </select>
-            <label className="api-opt-check" title="Color rows by protocol">
+            <label className="api-opt-check">
               <input type="checkbox" checked={colorRows} onChange={e => setColorRows(e.target.checked)} />
-              <span className="api-opt-check-label">Color rows</span>
+              <span className="api-opt-check-label">{t.pcapColorRows}</span>
             </label>
             {onvifData && onvifData.length > 0 && (
-              <label className="api-opt-check" title="ONVIF Analysis mode">
+              <label className="api-opt-check">
                 <input type="checkbox" checked={showOnvif} onChange={e => setShowOnvif(e.target.checked)} />
                 <span className="api-opt-check-label">
                   <span className="proto-tag proto-onvif" style={{ marginRight: 4 }}>ONVIF</span>
-                  Analysis
+                  {t.pcapOnvifAnalysis}
                 </span>
               </label>
             )}
             {showOnvif && (
-              <label className="api-opt-check" title="Only show interactions with errors">
+              <label className="api-opt-check">
                 <input type="checkbox" checked={onvifErrorOnly} onChange={e => setOnvifErrorOnly(e.target.checked)} />
-                <span className="api-opt-check-label">Errors only</span>
+                <span className="api-opt-check-label">{t.pcapErrorsOnly}</span>
               </label>
             )}
           </>
@@ -525,12 +481,12 @@ export default function PcapAnalyzer({ onFileLoaded }) {
           <svg className="pcap-empty-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 20h4l4-12 6 24 4-16 4 8 4-4h6"/>
           </svg>
-          <p>Open a .pcap file to begin analysis</p>
+          <p>{t.pcapEmpty}</p>
         </div>
       )}
 
       {loading && (
-        <div className="pcap-empty"><div>Parsing…</div></div>
+        <div className="pcap-empty"><div>{t.pcapParsing}</div></div>
       )}
 
       {pcapId && !loading && (
@@ -548,7 +504,7 @@ export default function PcapAnalyzer({ onFileLoaded }) {
                       <thead>
                         <tr>
                           <th className="pkt-arrow-col"></th>
-                          <th>#</th><th>Time</th><th>Src → Dst</th><th>Action</th><th>Status</th><th>Error</th>
+                          <th>#</th><th>Time</th><th>{t.pcapSrcDst}</th><th>{t.pcapAction}</th><th>{t.pcapStatus}</th><th>{t.pcapError}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -561,12 +517,8 @@ export default function PcapAnalyzer({ onFileLoaded }) {
                           const bothSelected = onvifExpanded === reqKey || onvifExpanded === respKey;
                           return (
                         <>
-                          {/* Request row */}
-                          <tr
-                            key={reqKey}
-                            className={`onvif-row${bothSelected ? ' onvif-expanded' : ''}`}
-                            onClick={() => setOnvifExpanded(isReqExpanded ? null : reqKey)}
-                          >
+                          <tr key={reqKey} className={`onvif-row${bothSelected ? ' onvif-expanded' : ''}`}
+                            onClick={() => setOnvifExpanded(isReqExpanded ? null : reqKey)}>
                             <td className="pkt-arrow-col"><span className="pkt-pair-arrow">→</span></td>
                             <td className="mono">{i + 1}-req</td>
                             <td className="mono">{ix.ts.toFixed(3)}</td>
@@ -577,33 +529,26 @@ export default function PcapAnalyzer({ onFileLoaded }) {
                           </tr>
                           <tr key={`${reqKey}-d`} className={`onvif-detail-row${isReqExpanded ? ' open' : ''}`}>
                             <td colSpan={7}>
-                              <div className="onvif-detail-wrap">
-                                <div className="onvif-detail-inner">
-                                  <div className="onvif-detail">
-                                    <div className="onvif-detail-line"><span>URL:</span> {ix.url}</div>
-                                    {ix.reqBody && <XmlTree xml={ix.reqBody} />}
-                                  </div>
-                                </div>
-                              </div>
+                              <div className="onvif-detail-wrap"><div className="onvif-detail-inner"><div className="onvif-detail">
+                                <div className="onvif-detail-line"><span>URL:</span> {ix.url}</div>
+                                {ix.reqBody && <XmlTree xml={ix.reqBody} />}
+                              </div></div></div>
                             </td>
                           </tr>
-                          {/* Response row */}
                           {ix.respTs != null && (
-                            <tr
-                              key={respKey}
+                            <tr key={respKey}
                               className={`onvif-row${ix.isError ? ' onvif-error' : ''}${bothSelected ? ' onvif-expanded' : ''}`}
-                              onClick={() => setOnvifExpanded(isRespExpanded ? null : respKey)}
-                            >
+                              onClick={() => setOnvifExpanded(isRespExpanded ? null : respKey)}>
                               <td className="pkt-arrow-col"><span className="pkt-pair-arrow">←</span></td>
                               <td className="mono">{i + 1}-resp</td>
                               <td className="mono">{ix.respTs.toFixed(3)}</td>
                               <td className="mono">{ix.dst} → {ix.src}</td>
-                              <td className="onvif-action">RTT: {((ix.respTs - ix.ts) * 1000).toFixed(1)} ms</td>
+                              <td className="onvif-action">{t.pcapRtt(((ix.respTs - ix.ts) * 1000).toFixed(1))}</td>
                               <td className={`mono${ix.status >= 400 ? ' onvif-status-err' : ''}`}>
                                 {ix.status != null ? `${ix.status} ${ix.statusText || ''}` : '—'}
                               </td>
                               <td>
-                                {ix.hasSoapFault && <span className="onvif-fault-badge">SOAP Fault</span>}
+                                {ix.hasSoapFault && <span className="onvif-fault-badge">{t.pcapSoapFault}</span>}
                                 {!ix.hasSoapFault && ix.status >= 400 && <span className="onvif-fault-badge">HTTP {ix.status}</span>}
                               </td>
                             </tr>
@@ -611,17 +556,12 @@ export default function PcapAnalyzer({ onFileLoaded }) {
                           {ix.respTs != null && (
                             <tr key={`${respKey}-d`} className={`onvif-detail-row${isRespExpanded ? ' open' : ''}`}>
                               <td colSpan={7}>
-                                <div className="onvif-detail-wrap">
-                                  <div className="onvif-detail-inner">
-                                    <div className="onvif-detail">
-                                      {ix.respBody && <XmlTree xml={ix.respBody} />}
-                                    </div>
-                                  </div>
-                                </div>
+                                <div className="onvif-detail-wrap"><div className="onvif-detail-inner"><div className="onvif-detail">
+                                  {ix.respBody && <XmlTree xml={ix.respBody} />}
+                                </div></div></div>
                               </td>
                             </tr>
                           )}
-                          {/* Separator between interactions */}
                           <tr key={`sep${i}`} className="onvif-sep"><td colSpan={7}></td></tr>
                         </>
                       );
@@ -630,9 +570,9 @@ export default function PcapAnalyzer({ onFileLoaded }) {
                 </table>
               </div>
               <div className="pagination">
-                <button className="btn-secondary" disabled={onvifPage <= 1} onClick={() => setOnvifPage(p => p - 1)}>‹ Prev</button>
-                <span>Page {onvifPage} / {onvifTotalPages || 1}</span>
-                <button className="btn-secondary" disabled={onvifPage >= onvifTotalPages} onClick={() => setOnvifPage(p => p + 1)}>Next ›</button>
+                <button className="btn-secondary" disabled={onvifPage <= 1} onClick={() => setOnvifPage(p => p - 1)}>‹ {t.prev}</button>
+                <span>{t.pcapPage(onvifPage, onvifTotalPages || 1)}</span>
+                <button className="btn-secondary" disabled={onvifPage >= onvifTotalPages} onClick={() => setOnvifPage(p => p + 1)}>{t.next} ›</button>
               </div>
             </>
             );
@@ -643,8 +583,8 @@ export default function PcapAnalyzer({ onFileLoaded }) {
                     <thead>
                       <tr>
                         <th className="pkt-arrow-col"></th>
-                        <th>#</th><th>Time</th><th>Protocol</th>
-                        <th>Src</th><th>Dst</th><th>Len</th><th>Info</th>
+                        <th>#</th><th>Time</th><th>{t.protocol}</th>
+                        <th>{t.pcapSrc}</th><th>{t.pcapDst}</th><th>{t.pcapLen}</th><th>{t.pcapInfo}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -654,7 +594,7 @@ export default function PcapAnalyzer({ onFileLoaded }) {
                           className={rowClass(p)}
                           onClick={() => selectPacket(p)}
                           onDoubleClick={() => openDetail(p)}
-                          title="Double-click to inspect"
+                          title={t.pcapDblClick}
                         >
                           <td className="pkt-arrow-col">
                             {p.httpPairIndex != null && (p.pktIndex === selected || p.pktIndex === pairedIndex) && (
@@ -679,9 +619,9 @@ export default function PcapAnalyzer({ onFileLoaded }) {
                   </table>
                 </div>
                 <div className="pagination">
-                  <button className="btn-secondary" disabled={page <= 1} onClick={() => changePage(page - 1)}>‹ Prev</button>
-                  <span>Page {page} / {totalPages || 1}</span>
-                  <button className="btn-secondary" disabled={page >= totalPages} onClick={() => changePage(page + 1)}>Next ›</button>
+                  <button className="btn-secondary" disabled={page <= 1} onClick={() => changePage(page - 1)}>‹ {t.prev}</button>
+                  <span>{t.pcapPage(page, totalPages || 1)}</span>
+                  <button className="btn-secondary" disabled={page >= totalPages} onClick={() => changePage(page + 1)}>{t.next} ›</button>
                 </div>
               </>
             )}
@@ -689,7 +629,7 @@ export default function PcapAnalyzer({ onFileLoaded }) {
 
           {rightCollapsed ? (
             <div className="pcap-right-edge-zone">
-              <button className="pcap-right-toggle" onClick={() => setRightCollapsed(false)} title="Expand">
+              <button className="pcap-right-toggle" onClick={() => setRightCollapsed(false)} title={t.expand}>
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M8 2L4 6l4 4"/>
                 </svg>
@@ -697,7 +637,7 @@ export default function PcapAnalyzer({ onFileLoaded }) {
             </div>
           ) : null}
           <div className={`pcap-right${rightCollapsed ? ' pcap-right-collapsed' : ''}`}>
-            <button className="pcap-right-toggle" onClick={() => setRightCollapsed(true)} title="Collapse">
+            <button className="pcap-right-toggle" onClick={() => setRightCollapsed(true)} title={t.collapse}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 2l4 4-4 4"/>
               </svg>
@@ -705,7 +645,7 @@ export default function PcapAnalyzer({ onFileLoaded }) {
             <div className="pcap-right-scroll">
             {timeline.length > 0 && (
               <div className="chart-box">
-                <h4>Traffic (bytes/interval)</h4>
+                <h4>{t.pcapTrafficChart}</h4>
                 <ResponsiveContainer width="100%" height={140}>
                   <LineChart data={timeline}>
                     <XAxis dataKey="t" hide />
@@ -720,10 +660,9 @@ export default function PcapAnalyzer({ onFileLoaded }) {
                 </ResponsiveContainer>
               </div>
             )}
-
             {pieData.length > 0 && (
               <div className="chart-box">
-                <h4>Protocol Distribution</h4>
+                <h4>{t.pcapProtoDist}</h4>
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
                     <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={58}
@@ -742,10 +681,9 @@ export default function PcapAnalyzer({ onFileLoaded }) {
                 </ResponsiveContainer>
               </div>
             )}
-
             {stats && (
               <div className="chart-box">
-                <h4>Stats</h4>
+                <h4>{t.pcapStats}</h4>
                 <table className="stats-table">
                   <tbody>
                     {Object.entries(stats.byProtocol).sort((a, b) => b[1] - a[1]).map(([k, v]) => (

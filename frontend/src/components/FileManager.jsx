@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
+import { useT } from '../i18n.js';
 
 function fmtSize(bytes) {
   if (bytes == null) return '-';
@@ -14,6 +15,7 @@ function fmtDate(ts) {
 }
 
 export default function FileManager({ sessionId, connected }) {
+  const t = useT();
   const [remotePath, setRemotePath] = useState('.');
   const [pathInput, setPathInput] = useState('.');
   const [files, setFiles] = useState([]);
@@ -51,17 +53,17 @@ export default function FileManager({ sessionId, connected }) {
   async function handleUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
-    setUploadStatus('Uploading…');
+    setUploadStatus(t.sshUploading);
     const fd = new FormData();
     fd.append('sessionId', sessionId);
     fd.append('remotePath', remotePath);
     fd.append('file', file);
     try {
       await axios.post('/api/scp/upload', fd);
-      setUploadStatus('Upload complete');
+      setUploadStatus(t.fmUploadComplete);
       loadDir(remotePath);
     } catch (err) {
-      setUploadStatus(`Error: ${err.response?.data?.error || err.message}`);
+      setUploadStatus(t.fmError(err.response?.data?.error || err.message));
     }
   }
 
@@ -75,7 +77,7 @@ export default function FileManager({ sessionId, connected }) {
   if (!connected) {
     return (
       <div style={{ padding: 40, color: '#8b949e', textAlign: 'center' }}>
-        Connect via SSH first to use file transfer.
+        {t.fmConnectFirst}
       </div>
     );
   }
@@ -83,20 +85,20 @@ export default function FileManager({ sessionId, connected }) {
   return (
     <div className="file-manager">
       <div className="section">
-        <h3>Remote Files</h3>
+        <h3>{t.fmRemoteFiles}</h3>
         <div className="path-bar" style={{ marginTop: 10 }}>
-          <button className="secondary" onClick={goUp}>↑ Up</button>
+          <button className="secondary" onClick={goUp}>{t.fmUp}</button>
           <input value={pathInput} onChange={(e) => setPathInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && loadDir(pathInput)} />
-          <button className="secondary" onClick={() => loadDir(pathInput)}>Go</button>
-          <button className="primary" onClick={() => loadDir(remotePath)}>Refresh</button>
+          <button className="secondary" onClick={() => loadDir(pathInput)}>{t.fmGo}</button>
+          <button className="primary" onClick={() => loadDir(remotePath)}>{t.refresh}</button>
         </div>
         {error && <div className="error-msg" style={{ marginTop: 8 }}>{error}</div>}
         {loading ? (
-          <div style={{ padding: 20, color: '#8b949e' }}>Loading…</div>
+          <div style={{ padding: 20, color: '#8b949e' }}>{t.loading}</div>
         ) : (
           <table className="file-table" style={{ marginTop: 10 }}>
             <thead>
-              <tr><th>Name</th><th>Size</th><th>Modified</th><th></th></tr>
+              <tr><th>{t.name}</th><th>{t.size}</th><th>{t.modified}</th><th></th></tr>
             </thead>
             <tbody>
               {files.map((f) => (
@@ -110,19 +112,19 @@ export default function FileManager({ sessionId, connected }) {
                   <td>{fmtDate(f.mtime)}</td>
                   <td>
                     {!f.isDir && (
-                      <button className="secondary" onClick={() => handleDownload(f.name)}>Download</button>
+                      <button className="secondary" onClick={() => handleDownload(f.name)}>{t.download}</button>
                     )}
                   </td>
                 </tr>
               ))}
-              {files.length === 0 && <tr><td colSpan={4} style={{ color: '#8b949e', padding: 12 }}>Empty directory</td></tr>}
+              {files.length === 0 && <tr><td colSpan={4} style={{ color: '#8b949e', padding: 12 }}>{t.sshEmptyDir}</td></tr>}
             </tbody>
           </table>
         )}
       </div>
 
       <div className="section">
-        <h3>Upload to {remotePath}</h3>
+        <h3>{t.fmUploadTo(remotePath)}</h3>
         <div
           className="upload-zone"
           style={{ marginTop: 10 }}
@@ -134,7 +136,7 @@ export default function FileManager({ sessionId, connected }) {
             if (file) { fileInputRef.current.files = e.dataTransfer.files; handleUpload({ target: { files: e.dataTransfer.files } }); }
           }}
         >
-          Click or drag a file here to upload
+          {t.fmClickDrag}
         </div>
         <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleUpload} />
         {uploadStatus && <div style={{ marginTop: 8, fontSize: 12, color: '#8b949e' }}>{uploadStatus}</div>}

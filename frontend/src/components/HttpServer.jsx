@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import axios from 'axios';
+import { useT } from '../i18n.js';
 
 const METHOD_COLORS = {
   GET: '#3fb950', POST: '#38bdf8', PUT: '#fbbf24',
@@ -21,6 +22,7 @@ function fmtSize(b) {
 
 // ── RequestEntry ──────────────────────────────────────────────────────────────
 function RequestEntry({ entry, index }) {
+  const t = useT();
   const [open, setOpen] = useState(true);
   const color = METHOD_COLORS[entry.method] || 'var(--text-2)';
 
@@ -41,7 +43,7 @@ function RequestEntry({ entry, index }) {
 
       {open && (
         <div className="hs-entry-body">
-          <div className="hs-section-label">Headers</div>
+          <div className="hs-section-label">{t.headers}</div>
           <table className="hs-headers-table">
             <tbody>
               {Object.entries(entry.headers).map(([k, v]) => (
@@ -50,12 +52,12 @@ function RequestEntry({ entry, index }) {
             </tbody>
           </table>
           <div className="hs-section-label" style={{ marginTop: 10 }}>
-            Body
+            {t.body}
             {entry.bodySize > 0 && <span className="hs-body-size">{fmtSize(entry.bodySize)}</span>}
           </div>
           {entry.body
             ? <pre className="hs-body-pre">{entry.body}</pre>
-            : <div className="hs-body-empty">— empty body —</div>
+            : <div className="hs-body-empty">{t.httpEmptyBody}</div>
           }
         </div>
       )}
@@ -65,6 +67,7 @@ function RequestEntry({ entry, index }) {
 
 // ── main ──────────────────────────────────────────────────────────────────────
 export default function HttpServer() {
+  const t = useT();
   const [port,     setPort]     = useState('8080');
   const [path,     setPath]     = useState('/httpServer');
   const [authUser, setAuthUser] = useState('');
@@ -90,7 +93,6 @@ export default function HttpServer() {
 
   useEffect(() => { instanceRef.current = instanceId; }, [instanceId]);
 
-  // Auto-scroll to newest item
   useEffect(() => {
     if (autoScroll && requests.length > 0) {
       virtualizer.scrollToIndex(requests.length - 1, { behavior: 'smooth' });
@@ -142,27 +144,26 @@ export default function HttpServer() {
 
   return (
     <div className="hs-root">
-      {/* ── Config panel ── */}
       <div className="hs-config-bar">
         <div className="hs-config-fields">
           <div className="hs-field hs-field-port">
-            <label className="hs-label">Port</label>
+            <label className="hs-label">{t.port}</label>
             <input className="hs-input" value={port}
               onChange={e => setPort(e.target.value)} disabled={running} placeholder="8080" />
           </div>
           <div className="hs-field" style={{ flex: 2 }}>
-            <label className="hs-label">Listen path</label>
+            <label className="hs-label">{t.httpListenPath}</label>
             <input className="hs-input" value={path}
               onChange={e => setPath(e.target.value)} disabled={running} placeholder="/httpServer" />
           </div>
           <div className="hs-field-sep" />
           <div className="hs-field">
-            <label className="hs-label">Auth user <span className="hs-optional">(optional)</span></label>
+            <label className="hs-label">{t.authUser} <span className="hs-optional">{t.authOptional}</span></label>
             <input className="hs-input" value={authUser}
               onChange={e => setAuthUser(e.target.value)} disabled={running} placeholder="username" autoComplete="off" />
           </div>
           <div className="hs-field">
-            <label className="hs-label">Auth password</label>
+            <label className="hs-label">{t.authPassword}</label>
             <input className="hs-input" type="password" value={authPass}
               onChange={e => setAuthPass(e.target.value)} disabled={running} placeholder="••••••••" autoComplete="off" />
           </div>
@@ -171,12 +172,12 @@ export default function HttpServer() {
           {!running ? (
             <button className="btn-primary hs-start-btn" onClick={handleStart}>
               <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2.5l10 5.5-10 5.5V2.5z"/></svg>
-              Start
+              {t.start}
             </button>
           ) : (
             <button className="btn-danger hs-stop-btn" onClick={handleStop}>
               <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="2" width="12" height="12" rx="2"/></svg>
-              Stop
+              {t.stop}
             </button>
           )}
         </div>
@@ -184,40 +185,38 @@ export default function HttpServer() {
 
       {error && <div className="inline-error" style={{ margin: '0 0 8px' }}>{error}</div>}
 
-      {/* ── Status bar ── */}
       {running && serverInfo && (
         <div className="hs-status-bar">
           <span className="hs-status-dot" />
           <span className="hs-status-text">
-            Listening on port <strong>{serverInfo.port}</strong> → path <code>{serverInfo.path}</code>
-            {authUser.trim() && <span className="hs-auth-badge">Basic Auth</span>}
+            {t.httpListening(serverInfo.port, serverInfo.path)}
+            {authUser.trim() && <span className="hs-auth-badge">{t.basicAuth}</span>}
           </span>
           <div style={{ flex: 1 }} />
-          <span className="hs-req-count">{requests.length} request{requests.length !== 1 ? 's' : ''}</span>
+          <span className="hs-req-count">{t.httpRequests(requests.length)}</span>
           <label className="api-opt-check">
             <input type="checkbox" checked={autoScroll} onChange={e => setAutoScroll(e.target.checked)} />
-            <span className="api-opt-check-label">Auto-scroll</span>
+            <span className="api-opt-check-label">{t.autoScroll}</span>
           </label>
           {requests.length > 0 && (
-            <button className="btn-xs danger" onClick={() => setRequests([])}>Clear</button>
+            <button className="btn-xs danger" onClick={() => setRequests([])}>{t.clear}</button>
           )}
         </div>
       )}
 
-      {/* ── Request log (virtualized) ── */}
       <div ref={parentRef} className="hs-log">
         {!running && requests.length === 0 && (
           <div className="hs-empty">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.25">
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
-            <p>Configure and start the server to receive requests</p>
+            <p>{t.httpEmpty}</p>
           </div>
         )}
         {running && requests.length === 0 && (
           <div className="hs-empty">
             <span className="hs-pulse-ring" />
-            <p>Waiting for incoming requests…</p>
+            <p>{t.httpWaiting}</p>
           </div>
         )}
         {requests.length > 0 && (

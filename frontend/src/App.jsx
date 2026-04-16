@@ -93,7 +93,7 @@ function glassMove(e) {
 }
 
 // Inner component so useT() can read LangContext provided by App
-function AppInner({ theme, setTheme }) {
+function AppInner({ lang, setLang, theme, setTheme }) {
   const t = useT();
   const [view, setView] = useState('ssh');
   const [sessionId, setSessionId] = useState(null);
@@ -112,6 +112,18 @@ function AppInner({ theme, setTheme }) {
 
   function cycleTheme() {
     setTheme(th => th === 'auto' ? 'dark' : th === 'dark' ? 'light' : 'auto');
+  }
+
+  function navigate(newView) {
+    if (view === 'pcap' && newView !== 'pcap' && pcapFileInfo.pcapId && pcapFileInfo.fileSize > 50 * 1024 * 1024) {
+      const mb = (pcapFileInfo.fileSize / 1024 / 1024).toFixed(1);
+      const ok = window.confirm(t.pcapCloseConfirm(mb));
+      if (ok) {
+        setPcapKey(k => k + 1);
+        setPcapFileInfo({ pcapId: null, fileSize: 0 });
+      }
+    }
+    setView(newView);
   }
 
   const themeIcon = theme === 'light' ? <SunIcon /> : theme === 'dark' ? <MoonIcon /> : <span className="theme-auto">A</span>;
@@ -204,7 +216,7 @@ function AppInner({ theme, setTheme }) {
         <div style={{ display: view === 'tcplpr' ? 'flex' : 'none', flex: 1, overflow: 'hidden', flexDirection: 'column' }}>
           <AnprTcpClient />
         </div>
-        {view === 'settings' && <Settings theme={theme} setTheme={setTheme} />}
+        {view === 'settings' && <Settings theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} />}
       </main>
     </div>
   );
@@ -212,6 +224,7 @@ function AppInner({ theme, setTheme }) {
 
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('nt-theme') || 'dark');
+  const [lang,  setLang]  = useState(() => localStorage.getItem('nt-lang')  || 'en');
 
   useEffect(() => {
     const root = document.documentElement;
@@ -227,6 +240,10 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
+    localStorage.setItem('nt-lang', lang);
+  }, [lang]);
+
+  useEffect(() => {
     function onUnload() {
       if (localStorage.getItem('nt-auto-clean') !== 'false') {
         navigator.sendBeacon('/api/cache/clear');
@@ -237,8 +254,8 @@ export default function App() {
   }, []);
 
   return (
-    <LangContext.Provider value="en">
-      <AppInner theme={theme} setTheme={setTheme} />
+    <LangContext.Provider value={lang}>
+      <AppInner lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} />
     </LangContext.Provider>
   );
 }

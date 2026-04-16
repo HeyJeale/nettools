@@ -9,9 +9,6 @@ const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', '..', '
 const pcapStore = new Map();
 
 function clearStore() {
-  for (const { filePath } of pcapStore.values()) {
-    try { fs.unlinkSync(filePath); } catch {}
-  }
   pcapStore.clear();
 }
 

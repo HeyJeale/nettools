@@ -1,0 +1,20 @@
+{
+  "name": "nettools-backend",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@cto.af/pcap-ng-parser": "^3.0.2",
+    "@fastify/cors": "^11.0.0",
+    "@fastify/multipart": "^10.0.0",
+    "@fastify/static": "^9.1.0",
+    "@fastify/websocket": "^11.0.0",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.8.4",
+    "pcap-parser": "^0.2.1",
+    "ssh2": "^1.16.0",
+    "uuid": "^9.0.1"
+  }
+}

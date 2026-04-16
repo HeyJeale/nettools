@@ -1,0 +1,62 @@
+{
+  "name": "nettools",
+  "version": "1.0.0",
+  "author": "Lucas Lu w/ Claude Code",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "npm run build:frontend && electron-builder",
+    "build:frontend": "cd frontend && npm run build",
+    "pack": "npm run build:frontend && electron-builder --dir"
+  },
+  "devDependencies": {
+    "electron": "^35.7.5",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.nettools.app",
+    "productName": "NetTools",
+    "asar": false,
+    "directories": {
+      "output": "dist-electron",
+      "buildResources": "electron/build"
+    },
+    "files": [
+      "electron/main.js",
+      "backend/src/**/*",
+      "backend/package.json",
+      "frontend/dist/**/*"
+    ],
+    "extraFiles": [
+      {
+        "from": "backend/node_modules",
+        "to": "resources/app/backend/node_modules",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "electron/build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "electron/build/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "electron/build/icon.png"
+    }
+  }
+}

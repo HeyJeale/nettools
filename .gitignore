@@ -29,3 +29,4 @@ Thumbs.db
 
 # Electron builder cache
 electron-builder-effective-config.yaml
+CLAUDE.md

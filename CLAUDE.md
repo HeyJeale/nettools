@@ -36,6 +36,7 @@ nettools/
     ├── src/
     │   ├── App.jsx             标签路由、整体布局、主题、beforeunload 自动清理
     │   ├── App.css             单一 CSS 文件 — 所有组件样式
+    │   ├── i18n.js             多语言支持（LANGS map + LangContext + useT() hook）
     │   └── components/
     │       ├── PcapAnalyzer.jsx  数据包表格、过滤器、图表、详情弹窗
     │       ├── SSHTerminal.jsx   基于 xterm.js 的终端
@@ -103,6 +104,8 @@ const pcapStore = new Map();
 
 服务器重启后清空。上传的文件保留在 `uploads/` 目录中。
 
+`clearStore()` 只清内存 map，不删磁盘文件（磁盘清理由 `clearDir()` 负责）。
+
 ### HTTP 过滤
 
 使用 `filter=http` 查询时，仅返回 `protocol === 'HTTP'` 的数据包。  
@@ -118,13 +121,52 @@ TCP 重组前驱分段为 `protocol: 'TCP'`，自动排除 → 过滤器只暴�
 ### Settings 页（`Settings.jsx`）
 
 - **颜色模式**：dark / light / auto 三张卡片，含硬编码颜色缩略 UI 预览，点选后持久化到 `localStorage('nt-theme')`，通过 `setTheme` prop 实时切换
-- **缓存管理**：`GET /api/cache/info` 显示大小；`POST /api/cache/clear` 清除后返回 `{ freed, count }`
+- **缓存管理**：`GET /api/cache/info` 显示大小；`POST /api/cache/clear` 清除后返回 `{ freed, count }`；清除成功后广播 `nt-cache-cleared` 自定义事件
 - **退出自动清理**：`localStorage('nt-auto-clean')`，默认 `true`；`App.jsx` 的 `beforeunload` 监听器在开启时调用 `navigator.sendBeacon('/api/cache/clear')`
+
+### nt-cache-cleared 事件
+
+`Settings.jsx` 清理成功后 dispatch `window.dispatchEvent(new CustomEvent('nt-cache-cleared'))`，以下组件监听并自行清理：
+- `PcapAnalyzer`：重置所有状态（关闭当前 PCAP）
+- `AnprServer`：清空 allRecords、重置分页
+- `AnprTcpClient`：清空 allRecords、重置分页
+
+### PCAP 内存管理
+
+- `PcapAnalyzer` 始终挂载（CSS display:none 隐藏），导航离开不卸载，不丢失分析状态
+- 上传新文件前自动 `DELETE /api/pcap/:pcapId` 释放旧文件内存
+- 工具栏有 "Close PCAP" 按钮手动释放
+- `getTimeline()` 中 idx 已 clamp 到 `[0, buckets-1]`，修复乱序时间戳导致的 500 崩溃
 
 ### 入站 HTTP 服务器
 
 每个实例在独立 TCP 端口上以 Node.js `http.Server` 启动，通过 WebSocket 流式推送请求。  
 页面卸载时通过 `navigator.sendBeacon` 停止服务器。
+
+### i18n 多语言支持
+
+- `frontend/src/i18n.js` — LANGS map + LangContext + useT() hook
+- **master 分支**：仅英文（`LANGS = { en }`），Settings 无语言选择器，LangContext 固定值 `'en'`
+- **multi-lang 分支**：英文 + 简体中文，Settings 含语言选择器，lang 持久化至 `localStorage('nt-lang')`
+- 所有组件均使用 `useT()`，零硬编码 UI 字符串
+
+### 版本号规则
+
+`X.Y.Z[-suffix]`
+- X：大版本（大功能/UI 大变更）
+- Y：Minor（新功能，向后兼容）
+- Z：Patch（bug 修复、小调整）
+- suffix：语言标记（`-en` = 英文单语言版，无后缀 = 多语言版）
+- 当前版本：master = `1.0.1-en`，multi-lang = `1.0.1`
+
+---
+
+## Git 分支 & CI
+
+- **master**：英文单语言版（1.0.1-en）
+- **multi-lang**：多语言版（1.0.1，含简体中文）
+- **GitHub**：https://github.com/HeyJeale/nettools
+- **GitHub Actions**：`.github/workflows/build.yml` — tag 触发（`v*`）+ 手动触发，构建 macOS ARM64 + Windows x64，自动创建 GitHub Release
 
 ---
 
@@ -179,6 +221,7 @@ TCP 重组前驱分段为 `protocol: 'TCP'`，自动排除 → 过滤器只暴�
 | ONVIF 分析视图（工具栏 toggle，主表格切换，双行 req/resp，XML 树展开） | 完成 |
 | 左侧 sidebar 可收起（图标模式，hover 显示折叠按钮） | 完成 |
 | 右侧面板可收起（0 宽度，右边缘 hover 触发展开按钮） | 完成 |
+| Close PCAP 按钮（手动释放内存） | 完成 |
 
 ---
 
@@ -202,6 +245,7 @@ TCP 重组前驱分段为 `protocol: 'TCP'`，自动排除 → 过滤器只暴�
 | 颜色模式切换（dark/light/auto 卡片 + 缩略预览） | 完成 |
 | 缓存大小显示与手动清理（释放空间反馈） | 完成 |
 | 退出自动清理开关（localStorage 持久化） | 完成 |
+| 清理缓存时同步清空 PCAP/ANPR 列表 | 完成 |
 
 ---
 
@@ -222,3 +266,5 @@ TCP 重组前驱分段为 `protocol: 'TCP'`，自动排除 → 过滤器只暴�
 - 完成后禁止罗列总结 — 只简洁说明改动了什么
 - 后端使用 CommonJS（`require`/`module.exports`），前端使用 ESM（`import`/`export`）— 禁止混用
 - 修改 `pcapParser.js` 时：用 Write 整体重写更安全（Edit 工具存在 Unicode 问题）
+- 不要每次修改后自动 commit，只在用户明确要求时才 commit，一次性提交所有改动
+- 用户发送单独的 "." 表示"继续"，直接执行下一步，不需要任何回复文字

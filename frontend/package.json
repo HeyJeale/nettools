@@ -1,6 +1,6 @@
 {
   "name": "nettools-frontend",
-  "version": "1.0.1-en",
+  "version": "1.0.2-en",
   "type": "module",
   "scripts": {
     "dev": "vite",

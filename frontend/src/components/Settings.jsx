@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { LANGS, useT } from '../i18n.js';
+import { useT } from '../i18n.js';
 
 function fmtBytes(b) {
   if (!b) return '0 B';
@@ -64,7 +64,7 @@ const THEME_OPTIONS = [
   },
 ];
 
-export default function Settings({ theme, setTheme, lang, setLang }) {
+export default function Settings({ theme, setTheme }) {
   const t = useT();
   const [cacheInfo,   setCacheInfo]   = useState(null);
   const [clearing,    setClearing]    = useState(false);
@@ -98,29 +98,6 @@ export default function Settings({ theme, setTheme, lang, setLang }) {
 
   return (
     <div className="settings-root">
-
-      {/* ── Language ───────────────────────────────────────────────────────────── */}
-      <div className="settings-card">
-        <div className="settings-card-title">{t.settingsLang}</div>
-        <div className="lang-selector">
-          {Object.entries(LANGS).map(([id, { label }]) => (
-            <button
-              key={id}
-              className={`lang-btn${lang === id ? ' selected' : ''}`}
-              onClick={() => setLang(id)}
-            >
-              {label}
-              {lang === id && (
-                <span className="lang-btn-check">
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M1.5 5l2.5 2.5 4.5-4.5"/>
-                  </svg>
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* ── Color mode ─────────────────────────────────────────────────────────── */}
       <div className="settings-card">

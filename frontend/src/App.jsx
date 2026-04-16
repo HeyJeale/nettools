@@ -93,7 +93,7 @@ function glassMove(e) {
 }
 
 // Inner component so useT() can read LangContext provided by App
-function AppInner({ lang, setLang, theme, setTheme }) {
+function AppInner({ theme, setTheme }) {
   const t = useT();
   const [view, setView] = useState('ssh');
   const [sessionId, setSessionId] = useState(null);
@@ -216,7 +216,7 @@ function AppInner({ lang, setLang, theme, setTheme }) {
         <div style={{ display: view === 'tcplpr' ? 'flex' : 'none', flex: 1, overflow: 'hidden', flexDirection: 'column' }}>
           <AnprTcpClient />
         </div>
-        {view === 'settings' && <Settings theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} />}
+        {view === 'settings' && <Settings theme={theme} setTheme={setTheme} />}
       </main>
     </div>
   );
@@ -224,7 +224,6 @@ function AppInner({ lang, setLang, theme, setTheme }) {
 
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('nt-theme') || 'dark');
-  const [lang,  setLang]  = useState(() => localStorage.getItem('nt-lang')  || 'en');
 
   useEffect(() => {
     const root = document.documentElement;
@@ -240,10 +239,6 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
-    localStorage.setItem('nt-lang', lang);
-  }, [lang]);
-
-  useEffect(() => {
     function onUnload() {
       if (localStorage.getItem('nt-auto-clean') !== 'false') {
         navigator.sendBeacon('/api/cache/clear');
@@ -254,8 +249,8 @@ export default function App() {
   }, []);
 
   return (
-    <LangContext.Provider value={lang}>
-      <AppInner lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} />
+    <LangContext.Provider value="en">
+      <AppInner theme={theme} setTheme={setTheme} />
     </LangContext.Provider>
   );
 }

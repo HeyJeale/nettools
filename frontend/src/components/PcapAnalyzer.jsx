@@ -333,6 +333,14 @@ export default function PcapAnalyzer() {
 
   useEffect(() => { pcapIdRef.current = pcapId; }, [pcapId]);
 
+  useEffect(() => {
+    function onCacheCleared() {
+      resetState();
+    }
+    window.addEventListener('nt-cache-cleared', onCacheCleared);
+    return () => window.removeEventListener('nt-cache-cleared', onCacheCleared);
+  }, []);
+
   async function deleteCurrent(id) {
     if (!id) return;
     await axios.delete(`/api/pcap/${id}`).catch(() => {});

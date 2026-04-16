@@ -89,6 +89,7 @@ export default function Settings({ theme, setTheme }) {
       const { data } = await axios.post('/api/cache/clear');
       setClearResult({ ok: true, freed: data.freed, count: data.count });
       setCacheInfo({ bytes: 0, count: 0 });
+      window.dispatchEvent(new CustomEvent('nt-cache-cleared'));
     } catch (err) {
       setClearResult({ ok: false, error: err.response?.data?.error || err.message });
     } finally {

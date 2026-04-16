@@ -304,7 +304,7 @@ function PacketDetailModal({ pkt, onClose }) {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
-export default function PcapAnalyzer({ onFileLoaded }) {
+export default function PcapAnalyzer() {
   const t = useT();
   const [pcapId, setPcapId] = useState(null);
   const [total, setTotal] = useState(0);
@@ -329,10 +329,34 @@ export default function PcapAnalyzer({ onFileLoaded }) {
   const [pageSize, setPageSize] = useState(100);
   const [onvifPage, setOnvifPage] = useState(1);
   const fileInputRef = useRef(null);
+  const pcapIdRef = useRef(null);
+
+  useEffect(() => { pcapIdRef.current = pcapId; }, [pcapId]);
+
+  async function deleteCurrent(id) {
+    if (!id) return;
+    await axios.delete(`/api/pcap/${id}`).catch(() => {});
+  }
+
+  function resetState() {
+    setPcapId(null); setTotal(0); setPackets([]); setFilteredTotal(0);
+    setFilter(''); setFilterInput(''); setPage(1); setSelected(null);
+    setPairedIndex(null); setModalPkt(null); setStats(null);
+    setTimeline([]); setOnvifData(null); setOnvifExpanded(null);
+    setOnvifErrorOnly(false);
+  }
+
+  async function handleClose() {
+    await deleteCurrent(pcapId);
+    resetState();
+  }
 
   async function handleUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
+    // Release previous PCAP before loading new one
+    await deleteCurrent(pcapId);
+    resetState();
     setLoading(true); setError('');
     const fd = new FormData();
     fd.append('file', file);
@@ -346,7 +370,6 @@ export default function PcapAnalyzer({ onFileLoaded }) {
       await loadTimeline(data.pcapId, '');
       const { data: od } = await axios.get(`/api/pcap/${data.pcapId}/onvif`);
       setOnvifData(od.interactions);
-      onFileLoaded?.(data.pcapId, file.size);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally {
@@ -472,6 +495,11 @@ export default function PcapAnalyzer({ onFileLoaded }) {
               </label>
             )}
           </>
+        )}
+        {pcapId && (
+          <button className="btn-danger" style={{ marginLeft: 'auto' }} onClick={handleClose}>
+            {t.pcapClose}
+          </button>
         )}
         {error && <span className="inline-error">{error}</span>}
       </div>

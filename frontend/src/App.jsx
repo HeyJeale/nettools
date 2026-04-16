@@ -100,8 +100,6 @@ function AppInner({ theme, setTheme }) {
   const [connected, setConnected] = useState(false);
   const [connInfo, setConnInfo] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [pcapFileInfo, setPcapFileInfo] = useState({ pcapId: null, fileSize: 0 });
-  const [pcapKey, setPcapKey] = useState(0);
 
   useEffect(() => {
     function move(e) {
@@ -114,18 +112,6 @@ function AppInner({ theme, setTheme }) {
 
   function cycleTheme() {
     setTheme(th => th === 'auto' ? 'dark' : th === 'dark' ? 'light' : 'auto');
-  }
-
-  function navigate(newView) {
-    if (view === 'pcap' && newView !== 'pcap' && pcapFileInfo.pcapId && pcapFileInfo.fileSize > 50 * 1024 * 1024) {
-      const mb = (pcapFileInfo.fileSize / 1024 / 1024).toFixed(1);
-      const ok = window.confirm(t.pcapCloseConfirm(mb));
-      if (ok) {
-        setPcapKey(k => k + 1);
-        setPcapFileInfo({ pcapId: null, fileSize: 0 });
-      }
-    }
-    setView(newView);
   }
 
   const themeIcon = theme === 'light' ? <SunIcon /> : theme === 'dark' ? <MoonIcon /> : <span className="theme-auto">A</span>;
@@ -158,7 +144,7 @@ function AppInner({ theme, setTheme }) {
               <button
                 key={id}
                 className={`nav-item${view === id ? ' active' : ''}`}
-                onClick={() => navigate(id)}
+                onClick={() => setView(id)}
                 title={sidebarCollapsed ? t[NAV_LABEL_KEYS[id]] : ''}
               >
                 <span className="nav-icon">{NAV_ICONS[id]}</span>
@@ -205,7 +191,9 @@ function AppInner({ theme, setTheme }) {
             connInfo={connInfo} setConnInfo={setConnInfo}
           />
         </div>
-        {view === 'pcap' && <PcapAnalyzer key={pcapKey} onFileLoaded={(id, size) => setPcapFileInfo({ pcapId: id, fileSize: size })} />}
+        <div style={{ display: view === 'pcap' ? 'flex' : 'none', flex: 1, overflow: 'hidden', flexDirection: 'column' }}>
+          <PcapAnalyzer />
+        </div>
         {view === 'api' && <ApiTester />}
         <div style={{ display: view === 'httpserver' ? 'flex' : 'none', flex: 1, overflow: 'hidden', flexDirection: 'column' }}>
           <HttpServer />

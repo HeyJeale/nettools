@@ -186,6 +186,7 @@ const en = {
 
     // ── PCAP Analyzer ─────────────────────────────────────────────────────────
     pcapOpen:           'Open PCAP',
+    pcapClose:          'Close PCAP',
     pcapFilterPlaceholder: 'Filter: tcp, ip.src==1.2.3.4, contains "GET", http && port==80',
     pcapPackets:        (f, t) => `${f} / ${t} packets`,
     pcapPerPage:        (n) => `${n} / page`,

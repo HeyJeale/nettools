@@ -55,7 +55,7 @@
       "icon": "electron/build/icon.icns"
     },
     "linux": {
-      "target": "AppImage",
+      "target": ["AppImage", "deb"],
       "icon": "electron/build/icon.png"
     }
   }

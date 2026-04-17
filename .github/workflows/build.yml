@@ -31,6 +31,16 @@ jobs:
             artifact_name: en-win-x64
             ref: master
             edition: en
+          - os: ubuntu-latest
+            build_flag: --linux deb --x64
+            artifact_name: intl-linux-x64
+            ref: ''
+            edition: intl
+          - os: ubuntu-latest
+            build_flag: --linux deb --x64
+            artifact_name: en-linux-x64
+            ref: master
+            edition: en
 
     runs-on: ${{ matrix.os }}
 
@@ -75,19 +85,24 @@ jobs:
           version = version_raw.replace('-en', '')
           edition = "${{ matrix.edition }}"
 
-          for f in glob.glob('dist-electron/*.dmg') + glob.glob('dist-electron/*.exe') + glob.glob('dist-electron/*.AppImage'):
+          for f in glob.glob('dist-electron/*.dmg') + glob.glob('dist-electron/*.exe') + glob.glob('dist-electron/*.AppImage') + glob.glob('dist-electron/*.deb'):
               base = os.path.basename(f)
               if edition == 'en':
                   # NetTools-1.0.2-en-arm64.dmg -> NetTools-1.0.2-arm64.dmg
                   # NetTools Setup 1.0.2-en.exe  -> NetTools-1.0.2.exe
+                  # nettools_1.0.2-en_amd64.deb  -> NetTools-1.0.2-amd64.deb
                   new = re.sub(r'NetTools Setup ([\d.]+-en)\.exe', f'NetTools-{version}.exe', base)
                   new = new.replace(f'-en-', '-').replace(f'-en.', '.')
+                  new = re.sub(r'nettools_([\d.]+-en)_amd64\.deb', f'NetTools-{version}-amd64.deb', new)
+                  new = re.sub(r'nettools_([\d.]+)_amd64\.deb', f'NetTools-{version}-amd64.deb', new)
               else:
                   # NetTools-1.0.2-arm64.dmg     -> NetTools-1.0.2-intl-arm64.dmg
                   # NetTools Setup 1.0.2.exe      -> NetTools-1.0.2-intl.exe
+                  # nettools_1.0.2_amd64.deb      -> NetTools-1.0.2-intl-amd64.deb
                   new = re.sub(r'NetTools Setup ([\d.]+)\.exe', f'NetTools-{version}-intl.exe', base)
                   new = re.sub(rf'NetTools-{re.escape(version)}-arm64', f'NetTools-{version}-intl-arm64', new)
                   new = re.sub(rf'NetTools-{re.escape(version)}\.', f'NetTools-{version}-intl.', new)
+                  new = re.sub(r'nettools_([\d.]+)_amd64\.deb', f'NetTools-{version}-intl-amd64.deb', new)
               if new != base:
                   os.rename(f, os.path.join('dist-electron', new))
                   print(f'Renamed: {base} -> {new}')
@@ -103,6 +118,7 @@ jobs:
             dist-electron/*.dmg
             dist-electron/*.exe
             dist-electron/*.AppImage
+            dist-electron/*.deb
           if-no-files-found: ignore
 
   release:
@@ -140,5 +156,7 @@ jobs:
             |------|----------|---------|
             | `NetTools-1.0.2-arm64.dmg` | macOS (Apple Silicon) | en-US |
             | `NetTools-1.0.2.exe` | Windows x64 (installer) | en-US |
+            | `NetTools-1.0.2-amd64.deb` | Ubuntu/Debian x64 | en-US |
             | `NetTools-1.0.2-intl-arm64.dmg` | macOS (Apple Silicon) | Global (EN / 简体中文) |
             | `NetTools-1.0.2-intl.exe` | Windows x64 (installer) | Global (EN / 简体中文) |
+            | `NetTools-1.0.2-intl-amd64.deb` | Ubuntu/Debian x64 | Global (EN / 简体中文) |

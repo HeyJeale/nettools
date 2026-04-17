@@ -3,7 +3,17 @@
   "version": "1.0.2",
   "scripts": {
     "dev": "node --watch src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/tests/**/*.test.js"],
+    "testTimeout": 15000,
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@cto\\.af/pcap-ng-parser)/)"
+    ]
   },
   "dependencies": {
     "@cto.af/pcap-ng-parser": "^3.0.2",
@@ -16,5 +26,8 @@
     "pcap-parser": "^0.2.1",
     "ssh2": "^1.16.0",
     "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "jest": "^30.3.0"
   }
 }

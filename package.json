@@ -1,7 +1,10 @@
 {
   "name": "nettools",
   "version": "1.0.2",
-  "author": "Lucas Lu w/ Claude Code",
+  "author": {
+    "name": "Lucas Lu",
+    "email": "noreply@nettools.app"
+  },
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",

@@ -2,162 +2,200 @@
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
-const { parsePcap, filterPackets, getStats, getTimeline } = require('../services/pcapParser');
+const { parsePcap, filterFrames } = require('../services/pcapParser');
+const { getFrameHex } = require('../services/tsharkAdapter');
+const pcapDb = require('../services/pcapDb');
 
 const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', '..', 'uploads');
-// pcapId -> { filePath, packets }
-const pcapStore = new Map();
+
+function dbRowToListItem(row) {
+  return {
+    pktIndex: row.pkt_index,
+    ts: row.ts,
+    protocol: row.protocol,
+    srcIP: row.src_ip,
+    dstIP: row.dst_ip,
+    srcPort: row.src_port,
+    dstPort: row.dst_port,
+    len: row.len,
+    summary: row.summary,
+    httpPairIndex: row.http_pair_index,
+    httpKind: row.http_kind,
+    isOnvif: row.is_onvif === 1,
+    onvifAction: row.onvif_action,
+    tcpContinuation: row.tcp_continuation === 1,
+    reassemblyHead: row.reassembly_head,
+    tcpAnomaly: row.tcp_anomaly,
+  };
+}
+
+async function resolveFilter(filePath, filter) {
+  const expr = (filter || '').trim();
+  if (!expr) return null;
+  return filterFrames(filePath, expr);
+}
 
 function clearStore() {
-  pcapStore.clear();
+  return pcapDb.clearAll();
 }
 
 module.exports = async function pcapRoutes(fastify) {
   // Upload & parse pcap file
   fastify.post('/upload', async (req, reply) => {
-    let fileBuffer, fileName;
+    let fileBuffer;
     for await (const part of req.parts()) {
       if (part.type === 'file') {
-        fileName = part.filename;
         fileBuffer = await part.toBuffer();
       }
     }
     if (!fileBuffer) return reply.code(400).send({ error: 'No file uploaded' });
 
     const pcapId = uuidv4();
+    fs.mkdirSync(uploadsDir, { recursive: true });
     const filePath = path.join(uploadsDir, `${pcapId}.pcap`);
     fs.writeFileSync(filePath, fileBuffer);
 
     try {
-      const packets = await parsePcap(filePath);
-      pcapStore.set(pcapId, { filePath, packets });
-      return { pcapId, total: packets.length };
+      const { total } = await parsePcap(filePath, pcapId);
+      return { pcapId, total };
     } catch (err) {
-      fs.unlinkSync(filePath);
+      try { fs.unlinkSync(filePath); } catch (_) {}
+      try { pcapDb.deletePcap(pcapId); } catch (_) {}
       return reply.code(422).send({ error: `Parse error: ${err.message}` });
     }
   });
 
   // Packet list with optional filter + pagination
   fastify.get('/:pcapId/packets', async (req, reply) => {
-    const store = pcapStore.get(req.params.pcapId);
-    if (!store) return reply.code(404).send({ error: 'Not found' });
+    const pcap = pcapDb.getPcap(req.params.pcapId);
+    if (!pcap) return reply.code(404).send({ error: 'Not found' });
 
     const { filter = '', page = '1', limit = '100' } = req.query;
-    const filtered = filterPackets(store.packets, filter);
     const pageNum = Math.max(1, parseInt(page));
     const pageSize = Math.min(500, Math.max(1, parseInt(limit)));
-    const start = (pageNum - 1) * pageSize;
-    const slice = filtered.slice(start, start + pageSize).map((p, i) => ({
-      index: start + i,
-      pktIndex: p.pktIndex ?? (start + i),
-      ts: p.ts,
-      protocol: p.protocol,
-      srcIP: p.srcIP,
-      dstIP: p.dstIP,
-      srcPort: p.srcPort,
-      dstPort: p.dstPort,
-      len: p.len,
-      summary: p.summary,
-      httpPairIndex: p.httpPairIndex ?? null,
-      httpKind: p.http?.kind ?? null,
-      isOnvif: p.http?.isOnvif ?? false,
-      onvifAction: p.http?.onvifAction ?? null,
-      tcpContinuation: p.tcpContinuation ?? false,
-      reassemblyHead: p.reassemblyHead ?? null,
-      tcpAnomaly: p.tcpAnomaly ?? null,
-    }));
+    const offset = (pageNum - 1) * pageSize;
 
-    return { total: filtered.length, page: pageNum, pageSize, packets: slice };
+    let indexes = null;
+    try {
+      indexes = await resolveFilter(pcap.file_path, filter);
+    } catch (err) {
+      return reply.code(400).send({ error: `Filter error: ${err.message}` });
+    }
+
+    const { total, rows } = pcapDb.listPackets(req.params.pcapId, { limit: pageSize, offset, indexes });
+    const packets = rows.map((r, i) => ({ index: offset + i, ...dbRowToListItem(r) }));
+    return { total, page: pageNum, pageSize, packets };
   });
 
-  // Packet detail (hex + ascii)
+  // Packet detail
   fastify.get('/:pcapId/packet/:index', async (req, reply) => {
-    const store = pcapStore.get(req.params.pcapId);
-    if (!store) return reply.code(404).send({ error: 'Not found' });
+    const pcap = pcapDb.getPcap(req.params.pcapId);
+    if (!pcap) return reply.code(404).send({ error: 'Not found' });
     const idx = parseInt(req.params.index);
-    const pkt = store.packets[idx];
+    const pkt = pcapDb.getPacketBlob(req.params.pcapId, idx);
     if (!pkt) return reply.code(404).send({ error: 'Packet not found' });
     return pkt;
   });
 
   // Protocol statistics
   fastify.get('/:pcapId/stats', async (req, reply) => {
-    const store = pcapStore.get(req.params.pcapId);
-    if (!store) return reply.code(404).send({ error: 'Not found' });
+    const pcap = pcapDb.getPcap(req.params.pcapId);
+    if (!pcap) return reply.code(404).send({ error: 'Not found' });
     const { filter = '' } = req.query;
-    return getStats(filterPackets(store.packets, filter));
+    let indexes = null;
+    try {
+      indexes = await resolveFilter(pcap.file_path, filter);
+    } catch (err) {
+      return reply.code(400).send({ error: `Filter error: ${err.message}` });
+    }
+    return pcapDb.getStats(req.params.pcapId, indexes);
   });
 
   // Traffic timeline
   fastify.get('/:pcapId/timeline', async (req, reply) => {
-    const store = pcapStore.get(req.params.pcapId);
-    if (!store) return reply.code(404).send({ error: 'Not found' });
+    const pcap = pcapDb.getPcap(req.params.pcapId);
+    if (!pcap) return reply.code(404).send({ error: 'Not found' });
     const { filter = '', buckets = '60' } = req.query;
-    return { timeline: getTimeline(filterPackets(store.packets, filter), parseInt(buckets)) };
+    let indexes = null;
+    try {
+      indexes = await resolveFilter(pcap.file_path, filter);
+    } catch (err) {
+      return reply.code(400).send({ error: `Filter error: ${err.message}` });
+    }
+    const rows = pcapDb.getTimelineRows(req.params.pcapId, indexes);
+    return { timeline: bucketize(rows, parseInt(buckets) || 60) };
   });
 
   // ONVIF interaction analysis
   fastify.get('/:pcapId/onvif', async (req, reply) => {
-    const store = pcapStore.get(req.params.pcapId);
-    if (!store) return reply.code(404).send({ error: 'Not found' });
+    const pcap = pcapDb.getPcap(req.params.pcapId);
+    if (!pcap) return reply.code(404).send({ error: 'Not found' });
 
-    const packets = store.packets;
+    const requests = pcapDb.listOnvifRequests(req.params.pcapId);
     const interactions = [];
-    const seen = new Set();
 
-    for (let i = 0; i < packets.length; i++) {
-      const p = packets[i];
-      if (!p.http?.isOnvif || p.http.kind !== 'request') continue;
-      if (seen.has(i)) continue;
-      seen.add(i);
+    for (const r of requests) {
+      const reqPkt = pcapDb.getPacketBlob(req.params.pcapId, r.pkt_index);
+      if (!reqPkt) continue;
+      const respIdx = r.http_pair_index;
+      const respPkt = respIdx != null ? pcapDb.getPacketBlob(req.params.pcapId, respIdx) : null;
 
-      const respIdx = p.httpPairIndex ?? null;
-      const resp = respIdx != null ? packets[respIdx] : null;
-      if (respIdx != null) seen.add(respIdx);
-
-      // Extract SOAP fault detail snippet if present
       let faultDetail = null;
-      if (resp?.http?.hasSoapFault && resp.http.body) {
-        const fm = resp.http.body.match(/<[^>]*[Ff]ault[\s\S]*?<\/[^>]*[Ff]ault>/);
+      if (respPkt?.http?.hasSoapFault && respPkt.http.body) {
+        const fm = respPkt.http.body.match(/<[^>]*[Ff]ault[\s\S]*?<\/[^>]*[Ff]ault>/);
         faultDetail = fm ? fm[0].slice(0, 800) : null;
       }
-
-      const isError = resp?.http?.hasSoapFault ||
-                      (resp?.http?.status != null && resp.http.status >= 400);
+      const isError = respPkt?.http?.hasSoapFault ||
+                      (respPkt?.http?.status != null && respPkt.http.status >= 400);
 
       interactions.push({
-        reqIndex: i,
+        reqIndex: r.pkt_index,
         respIndex: respIdx,
-        ts: p.ts,
-        src: `${p.srcIP}:${p.srcPort}`,
-        dst: `${p.dstIP}:${p.dstPort}`,
-        action: p.http.onvifAction ?? null,
-        url: p.http.url ?? null,
-        method: p.http.method ?? null,
-        reqBody: p.http.body ?? null,
-        status: resp?.http?.status ?? null,
-        statusText: resp?.http?.statusText ?? null,
-        hasSoapFault: resp?.http?.hasSoapFault ?? false,
+        ts: r.ts,
+        src: `${r.src_ip}:${r.src_port}`,
+        dst: `${r.dst_ip}:${r.dst_port}`,
+        action: r.onvif_action,
+        url: reqPkt.http?.url ?? null,
+        method: reqPkt.http?.method ?? null,
+        reqBody: reqPkt.http?.body ?? null,
+        status: respPkt?.http?.status ?? null,
+        statusText: respPkt?.http?.statusText ?? null,
+        hasSoapFault: respPkt?.http?.hasSoapFault ?? false,
         faultDetail,
-        respBody: resp?.http?.body ?? null,
+        respBody: respPkt?.http?.body ?? null,
         isError,
-        respTs: resp?.ts ?? null,
+        respTs: respPkt?.ts ?? null,
       });
     }
-
     return { interactions };
   });
 
   // Delete pcap from memory + disk
   fastify.delete('/:pcapId', async (req, reply) => {
-    const store = pcapStore.get(req.params.pcapId);
-    if (store) {
-      try { fs.unlinkSync(store.filePath); } catch (_) {}
-      pcapStore.delete(req.params.pcapId);
+    const pcap = pcapDb.getPcap(req.params.pcapId);
+    if (pcap) {
+      try { fs.unlinkSync(pcap.file_path); } catch (_) {}
+      pcapDb.deletePcap(req.params.pcapId);
     }
     return { ok: true };
   });
 };
+
+function bucketize(rows, buckets) {
+  if (!rows.length) return [];
+  const minTs = rows[0].ts;
+  const maxTs = rows[rows.length - 1].ts;
+  const span = maxTs - minTs || 1;
+  const bucketSize = span / buckets;
+  const data = Array.from({ length: buckets }, (_, i) => ({
+    t: minTs + i * bucketSize, bytes: 0, count: 0,
+  }));
+  for (const r of rows) {
+    const idx = Math.max(0, Math.min(Math.floor((r.ts - minTs) / bucketSize), buckets - 1));
+    data[idx].bytes += r.len;
+    data[idx].count += 1;
+  }
+  return data;
+}
 
 module.exports.clearStore = clearStore;

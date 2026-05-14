@@ -5,12 +5,27 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { execFile } = require('child_process');
+const pcapDb = require('./services/pcapDb');
+const { checkTshark } = require('./services/tsharkBin');
 
 // Allow uploads dir to be overridden by Electron (or any parent process)
 const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
+// SQLite database path (overridable for tests/Electron userData)
+const dataDir = process.env.PCAP_DB_DIR || path.join(__dirname, '..', 'data');
+const dbPath = path.join(dataDir, 'pcap.db');
+pcapDb.init(dbPath);
+
 async function start() {
+  // Verify tshark is available before serving traffic
+  try {
+    const info = checkTshark();
+    fastify.log.info(`tshark ${info.version} at ${info.path}`);
+  } catch (err) {
+    fastify.log.error(`tshark unavailable: ${err.message}`);
+  }
+
   await fastify.register(require('@fastify/cors'), { origin: true });
   await fastify.register(require('@fastify/websocket'));
   await fastify.register(require('@fastify/multipart'), {

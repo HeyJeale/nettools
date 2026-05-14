@@ -45,6 +45,10 @@ function startBackend(port) {
   const uploadsDir = path.join(app.getPath('userData'), 'uploads');
   fs.mkdirSync(uploadsDir, { recursive: true });
 
+  // SQLite database location (per-user, persists across app updates)
+  const pcapDbDir = path.join(app.getPath('userData'), 'data');
+  fs.mkdirSync(pcapDbDir, { recursive: true });
+
   // Frontend dist is bundled alongside the electron/ dir
   const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');
 
@@ -52,7 +56,10 @@ function startBackend(port) {
   process.env.PORT = String(port);
   process.env.HOST = '127.0.0.1';
   process.env.UPLOADS_DIR = uploadsDir;
+  process.env.PCAP_DB_DIR = pcapDbDir;
   process.env.FRONTEND_DIST = frontendDist;
+  // Tell backend it's running inside a packaged Electron app
+  if (app.isPackaged) process.env.NETTOOLS_PACKAGED = '1';
 
   // Run backend in-process — no separate Node.js binary needed
   require(path.join(__dirname, '..', 'backend', 'src', 'index.js'));

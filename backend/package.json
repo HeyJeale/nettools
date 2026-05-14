@@ -9,21 +9,20 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "testMatch": ["**/tests/**/*.test.js"],
-    "testTimeout": 15000,
-    "transformIgnorePatterns": [
-      "node_modules/(?!(@cto\\.af/pcap-ng-parser)/)"
-    ]
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "testTimeout": 15000
   },
   "dependencies": {
-    "@cto.af/pcap-ng-parser": "^3.0.2",
     "@fastify/cors": "^11.0.0",
     "@fastify/multipart": "^10.0.0",
     "@fastify/static": "^9.1.0",
     "@fastify/websocket": "^11.0.0",
+    "better-sqlite3": "^12.10.0",
     "dotenv": "^16.4.5",
     "fastify": "^5.8.4",
-    "pcap-parser": "^0.2.1",
+    "split2": "^4.2.0",
     "ssh2": "^1.16.0",
     "uuid": "^9.0.1"
   },

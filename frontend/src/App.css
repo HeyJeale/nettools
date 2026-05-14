@@ -1131,6 +1131,12 @@ input::placeholder { color: var(--text-3); }
 .pd-body-pre.xml  { color: var(--green); }
 [data-theme="light"] .pd-body-pre { background: rgba(0,0,0,0.04); }
 
+.pd-truncated-notice {
+  font-size: 11px; color: #e3b341; margin-top: 4px;
+  padding: 3px 8px; background: rgba(227,179,65,0.1);
+  border-radius: var(--r-sm); border: 1px solid rgba(227,179,65,0.25);
+}
+
 .pd-hex-dump {
   background: rgba(0,0,0,0.35); border: 1px solid var(--glass-border);
   border-radius: var(--r-sm); padding: 8px 10px;

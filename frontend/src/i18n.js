@@ -187,7 +187,7 @@ const en = {
     // ── PCAP Analyzer ─────────────────────────────────────────────────────────
     pcapOpen:           'Open PCAP',
     pcapClose:          'Close PCAP',
-    pcapFilterPlaceholder: 'Filter: tcp, ip.src==1.2.3.4, contains "GET", http && port==80',
+    pcapFilterPlaceholder: 'Wireshark filter: tcp.port == 80, ip.addr == 1.2.3.4, rtsp, http.request.uri contains "onvif"',
     pcapPackets:        (f, t) => `${f} / ${t} packets`,
     pcapPerPage:        (n) => `${n} / page`,
     pcapColorRows:      'Color rows',
@@ -466,7 +466,7 @@ const zh = {
     // ── PCAP Analyzer ─────────────────────────────────────────────────────────
     pcapOpen:           '打开 PCAP',
     pcapClose:          '关闭 PCAP',
-    pcapFilterPlaceholder: '过滤器：tcp, ip.src==1.2.3.4, contains "GET", http && port==80',
+    pcapFilterPlaceholder: 'Wireshark 过滤器：tcp.port == 80, ip.addr == 1.2.3.4, rtsp, http.request.uri contains "onvif"',
     pcapPackets:        (f, t) => `${f} / ${t} 个数据包`,
     pcapPerPage:        (n) => `${n} 条/页`,
     pcapColorRows:      '协议着色',

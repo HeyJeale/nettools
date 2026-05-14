@@ -10,6 +10,18 @@ dist-electron/
 # Server cache (uploaded PCAP files, ANPR/LPR images)
 backend/uploads/
 
+# Runtime SQLite database (created on first launch)
+backend/data/
+
+# Local sample PCAPs used for debugging (keep test fixtures via explicit allow below)
+*.pcap
+*.pcapng
+!backend/tests/fixtures/*.pcap
+!backend/tests/fixtures/*.pcapng
+
+# Claude Code workspace metadata
+.claude/
+
 # Environment variables
 .env
 .env.local

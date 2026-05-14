@@ -114,7 +114,12 @@ function XmlTree({ xml }) {
   const [parsed, setParsed] = useState(null);
   const [err, setErr] = useState(null);
   useEffect(() => {
-    try { setParsed(xmlParser.parse(xml)); }
+    try {
+      const r = xmlParser.parse(xml);
+      // fast-xml-parser returns {} for non-markup input — treat as parse failure
+      if (r && Object.keys(r).length > 0) setParsed(r);
+      else setErr('not xml');
+    }
     catch (e) { setErr(e.message); }
   }, [xml]);
   if (err || !parsed) return <pre className="pd-body-pre">{xml}</pre>;
@@ -161,6 +166,7 @@ function HttpSection({ http }) {
         <>
           <div className="pd-sub-label">{t.body}</div>
           {isXml ? <XmlTree xml={http.body} /> : <pre className={`pd-body-pre ${isJson ? 'json' : ''}`}>{http.body}</pre>}
+          {http.bodyTruncated && <div className="pd-truncated-notice">Body truncated to 64 KB</div>}
         </>
       )}
     </LayerSection>
@@ -292,9 +298,12 @@ function PacketDetailModal({ pkt, onClose }) {
                 <pre className="pd-body-pre">{pkt.payloadAscii}</pre>
               </LayerSection>
             )}
-            <LayerSection title={t.pcapRawHex} color="#444c56" defaultOpen={false}>
-              <pre className="pd-hex-dump">{hexDump(pkt.rawHex)}</pre>
-            </LayerSection>
+            {(pkt.rawHex || pkt.payload) && (
+              <LayerSection title={t.pcapRawHex} color="#444c56" defaultOpen={false}>
+                <pre className="pd-hex-dump">{hexDump(pkt.rawHex || pkt.payload)}</pre>
+                {pkt.rawLen > 256 && <div className="pd-truncated-notice">Showing first 256 of {pkt.rawLen} bytes</div>}
+              </LayerSection>
+            )}
           </div>
         </div>
       </div>

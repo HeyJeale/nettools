@@ -88,17 +88,17 @@ jobs:
           for f in glob.glob('dist-electron/*.dmg') + glob.glob('dist-electron/*.exe') + glob.glob('dist-electron/*.AppImage') + glob.glob('dist-electron/*.deb'):
               base = os.path.basename(f)
               if edition == 'en':
-                  # NetTools-1.0.2-en-arm64.dmg -> NetTools-1.0.2-arm64.dmg
-                  # NetTools Setup 1.0.2-en.exe  -> NetTools-1.0.2.exe
-                  # nettools_1.0.2-en_amd64.deb  -> NetTools-1.0.2-amd64.deb
+                  # NetTools-1.1.0-en-arm64.dmg -> NetTools-1.1.0-arm64.dmg
+                  # NetTools Setup 1.1.0-en.exe  -> NetTools-1.1.0.exe
+                  # nettools_1.1.0-en_amd64.deb  -> NetTools-1.1.0-amd64.deb
                   new = re.sub(r'NetTools Setup ([\d.]+-en)\.exe', f'NetTools-{version}.exe', base)
                   new = new.replace(f'-en-', '-').replace(f'-en.', '.')
                   new = re.sub(r'nettools_([\d.]+-en)_amd64\.deb', f'NetTools-{version}-amd64.deb', new)
                   new = re.sub(r'nettools_([\d.]+)_amd64\.deb', f'NetTools-{version}-amd64.deb', new)
               else:
-                  # NetTools-1.0.2-arm64.dmg     -> NetTools-1.0.2-intl-arm64.dmg
-                  # NetTools Setup 1.0.2.exe      -> NetTools-1.0.2-intl.exe
-                  # nettools_1.0.2_amd64.deb      -> NetTools-1.0.2-intl-amd64.deb
+                  # NetTools-1.1.0-arm64.dmg     -> NetTools-1.1.0-intl-arm64.dmg
+                  # NetTools Setup 1.1.0.exe      -> NetTools-1.1.0-intl.exe
+                  # nettools_1.1.0_amd64.deb      -> NetTools-1.1.0-intl-amd64.deb
                   new = re.sub(r'NetTools Setup ([\d.]+)\.exe', f'NetTools-{version}-intl.exe', base)
                   new = re.sub(rf'NetTools-{re.escape(version)}-arm64', f'NetTools-{version}-intl-arm64', new)
                   new = re.sub(rf'NetTools-{re.escape(version)}\.', f'NetTools-{version}-intl.', new)
@@ -141,22 +141,25 @@ jobs:
           body: |
             ## What's New in ${{ github.ref_name }}
 
-            ### Improvements
-            - **PCAP Analyzer** now stays open when navigating to other pages — your analysis is preserved
-            - Uploading a new PCAP file automatically releases the previous one from memory
-            - Added **Close PCAP** button to manually free memory
-            - **Clear Cache** in Settings now instantly clears PCAP and ANPR record lists in the UI
+            ### Major Changes
+            - **PCAP analyzer rewritten** on top of `tshark` (Wireshark ≥ 4.4) and SQLite
+            - Reliable parsing of RTSP / RTP / RTCP / ONVIF / HTTP and 3000+ other protocols
+            - Native TCP reassembly, retransmission/out-of-order detection, and HTTP request/response pairing supplied by tshark
+            - Filter input now accepts the full **Wireshark display filter syntax** (e.g. `tcp.port == 80`, `http.request.uri contains "onvif"`, `tcp.stream eq 5`)
+            - Linux SLL ("cooked") captures and other non-Ethernet link types now decode correctly
+            - Large captures stay responsive — packets are stored in SQLite (WAL) instead of in-memory arrays
 
             ### Bug Fixes
-            - Fixed a crash (500 error) when loading PCAP files with out-of-order packet timestamps
-            - Fixed **Clear Cache** incorrectly reporting "0 files, 0 B freed"
+            - HTTP response bodies are now decoded to text instead of showing raw hex
+            - Header lists are recovered for reassembled HTTP messages spanning multiple TCP segments
+            - Packet detail dialog returns in <300 ms (was 2.5 s for large pcaps)
 
             ### Downloads
             | File | Platform | Edition |
             |------|----------|---------|
-            | `NetTools-1.0.2-arm64.dmg` | macOS (Apple Silicon) | en-US |
-            | `NetTools-1.0.2.exe` | Windows x64 (installer) | en-US |
-            | `NetTools-1.0.2-amd64.deb` | Ubuntu/Debian x64 | en-US |
-            | `NetTools-1.0.2-intl-arm64.dmg` | macOS (Apple Silicon) | Global (EN / 简体中文) |
-            | `NetTools-1.0.2-intl.exe` | Windows x64 (installer) | Global (EN / 简体中文) |
-            | `NetTools-1.0.2-intl-amd64.deb` | Ubuntu/Debian x64 | Global (EN / 简体中文) |
+            | `NetTools-1.1.0-arm64.dmg` | macOS (Apple Silicon) | en-US |
+            | `NetTools-1.1.0.exe` | Windows x64 (installer) | en-US |
+            | `NetTools-1.1.0-amd64.deb` | Ubuntu/Debian x64 | en-US |
+            | `NetTools-1.1.0-intl-arm64.dmg` | macOS (Apple Silicon) | Global (EN / 简体中文) |
+            | `NetTools-1.1.0-intl.exe` | Windows x64 (installer) | Global (EN / 简体中文) |
+            | `NetTools-1.1.0-intl-amd64.deb` | Ubuntu/Debian x64 | Global (EN / 简体中文) |

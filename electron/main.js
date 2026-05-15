@@ -4,6 +4,22 @@ const path = require('path');
 const fs = require('fs');
 const http = require('http');
 const net = require('net');
+const os = require('os');
+
+// Persist startup events to a stable location so packaged-app crashes are inspectable.
+// We can't use app.getPath('userData') here because app isn't ready yet.
+const startupLogPath = path.join(os.tmpdir(), 'nettools-startup.log');
+const earlyLog = (msg) => {
+  try { fs.appendFileSync(startupLogPath, `[${new Date().toISOString()}] ${msg}\n`); } catch (_) {}
+};
+
+process.on('uncaughtException', (err) => {
+  earlyLog(`UNCAUGHT: ${err.message}\n${err.stack}`);
+});
+process.on('unhandledRejection', (err) => {
+  earlyLog(`UNHANDLED REJECTION: ${err && err.stack || err}`);
+});
+earlyLog(`--- module load (pid=${process.pid}, argv=${process.argv.join(' ')}) ---`);
 
 let mainWindow;
 let backendPort;
@@ -88,12 +104,18 @@ async function createWindow(port) {
 }
 
 app.whenReady().then(async () => {
+  earlyLog(`whenReady fired (isPackaged=${app.isPackaged}, resourcesPath=${process.resourcesPath})`);
   try {
     backendPort = await findFreePort(3001);
+    earlyLog(`backendPort=${backendPort}`);
     startBackend(backendPort);
+    earlyLog('startBackend returned');
     await waitForBackend(backendPort);
+    earlyLog('backend healthy');
     await createWindow(backendPort);
+    earlyLog('window created');
   } catch (err) {
+    earlyLog(`STARTUP FAILED: ${err.message}\n${err.stack}`);
     console.error('Startup failed:', err);
     dialog.showErrorBox('NetTools 启动失败', err.message);
     app.quit();

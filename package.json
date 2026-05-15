@@ -46,7 +46,14 @@
           ]
         }
       ],
-      "icon": "electron/build/icon.ico"
+      "icon": "electron/build/icon.ico",
+      "extraFiles": [
+        {
+          "from": "resources/tshark/win",
+          "to": "resources/tshark",
+          "filter": ["**/*"]
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,
@@ -55,11 +62,25 @@
     },
     "mac": {
       "target": "dmg",
-      "icon": "electron/build/icon.icns"
+      "icon": "electron/build/icon.icns",
+      "extraFiles": [
+        {
+          "from": "resources/tshark/mac",
+          "to": "Resources/tshark",
+          "filter": ["**/*"]
+        }
+      ]
     },
     "linux": {
       "target": ["AppImage", "deb"],
-      "icon": "electron/build/icon.png"
+      "icon": "electron/build/icon.png",
+      "extraFiles": [
+        {
+          "from": "resources/tshark/linux",
+          "to": "resources/tshark",
+          "filter": ["**/*"]
+        }
+      ]
     }
   }
 }

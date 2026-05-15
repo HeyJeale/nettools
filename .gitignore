@@ -19,6 +19,9 @@ backend/data/
 !backend/tests/fixtures/*.pcap
 !backend/tests/fixtures/*.pcapng
 
+# Bundled tshark binaries (fetched per-platform by CI; stripped Wireshark install for local builds)
+resources/tshark/
+
 # Claude Code workspace metadata
 .claude/
 

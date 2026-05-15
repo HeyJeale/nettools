@@ -114,18 +114,6 @@ function AppInner({ lang, setLang, theme, setTheme }) {
     setTheme(th => th === 'auto' ? 'dark' : th === 'dark' ? 'light' : 'auto');
   }
 
-  function navigate(newView) {
-    if (view === 'pcap' && newView !== 'pcap' && pcapFileInfo.pcapId && pcapFileInfo.fileSize > 50 * 1024 * 1024) {
-      const mb = (pcapFileInfo.fileSize / 1024 / 1024).toFixed(1);
-      const ok = window.confirm(t.pcapCloseConfirm(mb));
-      if (ok) {
-        setPcapKey(k => k + 1);
-        setPcapFileInfo({ pcapId: null, fileSize: 0 });
-      }
-    }
-    setView(newView);
-  }
-
   const themeIcon = theme === 'light' ? <SunIcon /> : theme === 'dark' ? <MoonIcon /> : <span className="theme-auto">A</span>;
   const themeText = theme === 'auto' ? t.themeAuto : theme === 'dark' ? t.themeDark : t.themeLight;
 
